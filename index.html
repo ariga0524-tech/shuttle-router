@@ -331,9 +331,13 @@ dialog h3{margin:0 0 12px;font-size:15px}
     </div>
     <p class="hint">ふだんは押す必要はありません。渋滞事情が変わったときなどに使ってください。</p>
     <div id="matrixStatus" class="note"></div>
+    <p class="hint">同じキーで、送迎場所を住所から検索するとき（駅名や施設名だけでなく、
+      丁目・番地までの住所も）も精度よく調べられるようになります。
+      その場合は Google Cloud コンソールで「Geocoding API」も有効にしてください。</p>
     <div class="warnbox" style="margin-top:12px">
       <b>課金事故を防ぐ設定を必ず。</b> Google Cloud コンソールで、このキーに
-      ①「ウェブサイトの制限」でこのアプリのURLのみ許可 ②「Routes API」のみ許可 ③1日の割り当て上限、を設定してください。
+      ①「ウェブサイトの制限」でこのアプリのURLのみ許可 ②「Routes API」「Geocoding API」のみ許可
+      ③1日の割り当て上限、を設定してください。
       キーはこの端末のブラウザにのみ保存され、どこにも送信されません。
     </div>
   </section>
@@ -1327,10 +1331,33 @@ function editStaff(id){
     });
 }
 /**
- * 住所から緯度経度を調べる。OpenStreetMap の Nominatim（無料・キー不要）を使う。
- * 日本国内に絞って検索する。見つからなければ null。
+ * よくある表記ゆれを吸収する。IMEで住所を打つと全角の数字やダッシュが混ざりやすく、
+ * ジオコーダーが番地までうまく拾えない原因になるため、検索前に半角へそろえる。
  */
-async function geocodeAddress(query){
+function normalizeAddressQuery(q){
+  return q
+    .replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+    .replace(/[－ー―‐]/g, "-")
+    .replace(/[　]+/g, " ")
+    .trim();
+}
+
+/** Google Geocoding API（管理画面でキー設定済みのときだけ）。日本の番地まで精度が高い */
+async function geocodeViaGoogle(query, key){
+  const url = "https://maps.googleapis.com/maps/api/geocode/json?language=ja&region=jp"
+    + "&address=" + encodeURIComponent(query) + "&key=" + encodeURIComponent(key);
+  const res = await fetch(url);
+  if(!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  if(data.status === "ZERO_RESULTS") return null;
+  if(data.status !== "OK") throw new Error(data.status + (data.error_message ? "：" + data.error_message : ""));
+  const r = data.results[0];
+  return {lat: r.geometry.location.lat, lng: r.geometry.location.lng, address: r.formatted_address};
+}
+
+/** OpenStreetMap の Nominatim（無料・キー不要）。駅名や大きな施設名には強いが、
+ *  個別の番地までは見つからないことがある */
+async function geocodeViaOsm(query){
   const url = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=jp"
     + "&accept-language=ja&q=" + encodeURIComponent(query);
   const res = await fetch(url, {headers:{"Accept":"application/json"}});
@@ -1341,6 +1368,23 @@ async function geocodeAddress(query){
   const lat = parseFloat(r.lat), lng = parseFloat(r.lon);
   if(!isFinite(lat) || !isFinite(lng)) return null;
   return {lat, lng, address: r.display_name};
+}
+
+/**
+ * 住所から緯度経度を調べる。管理画面でGoogleのAPIキーが設定されていればそちらを
+ * 優先する（日本の番地レベルの精度が大きく違うため）。見つからない・使えない場合は
+ * 無料のOpenStreetMapで補う。両方とも見つからなければ null。
+ */
+async function geocodeAddress(rawQuery){
+  const query = normalizeAddressQuery(rawQuery);
+  const key = db.settings.apiKey;
+  if(key){
+    try{
+      const r = await geocodeViaGoogle(query, key);
+      if(r) return r;
+    }catch(e){ console.warn("Googleでの住所検索に失敗、OpenStreetMapで再検索します", e); }
+  }
+  return geocodeViaOsm(query);
 }
 
 function editLoc(id, afterCreate){
