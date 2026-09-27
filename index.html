@@ -1,0 +1,2611 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1720">
+<title>送迎順路メーカー</title>
+<style>
+:root{
+  --bg:#f5f6f8; --panel:#ffffff; --ink:#12181f; --sub:#5b6875; --line:#dfe3e8;
+  --accent:#1c6fd6; --accent-ink:#ffffff; --warn:#b3541e; --danger:#c0392b;
+  --ok:#1f7a4d; --chip:#eef1f5; --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 12px rgba(16,24,40,.05);
+  --car1:#1c6fd6; --car2:#0f8a6a; --car3:#a05a12; --on-car:#ffffff;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0f1720; --panel:#18222d; --ink:#e8edf3; --sub:#9aa8b6; --line:#2a3744;
+    --accent:#4f9bff; --accent-ink:#08121c; --warn:#e0a165; --danger:#ef7a6d;
+    --ok:#4fc38d; --chip:#22303d; --shadow:none;
+    --car1:#4f9bff; --car2:#3fc79a; --car3:#e0a165; --on-car:#08121c;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP","Yu Gothic UI",Meiryo,sans-serif;
+  font-size:15px; line-height:1.6; -webkit-text-size-adjust:100%;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.wrap{max-width:780px;margin:0 auto;padding:0 14px 96px}
+header{
+  position:sticky; top:0; z-index:20; background:var(--bg);
+  border-bottom:1px solid var(--line); padding:10px 0 0;
+}
+header .inner{max-width:780px;margin:0 auto;padding:0 14px}
+h1{font-size:17px;margin:0 0 8px;letter-spacing:.02em}
+h1 span{font-weight:400;color:var(--sub);font-size:12px;margin-left:8px}
+nav{display:flex;gap:4px}
+nav button{
+  flex:1; appearance:none; border:0; background:transparent; color:var(--sub);
+  font:inherit; font-size:13px; font-weight:600; padding:9px 4px; cursor:pointer;
+  border-bottom:2px solid transparent;
+}
+nav button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+section.card{
+  scroll-margin-top:96px;
+  background:var(--panel); border:1px solid var(--line); border-radius:12px;
+  padding:14px; margin:14px 0; box-shadow:var(--shadow);
+}
+.card > h2{
+  font-size:13px; margin:0 0 12px; color:var(--sub); font-weight:700;
+  letter-spacing:.06em; display:flex; align-items:center; gap:8px;
+}
+.step-no{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:20px;height:20px;border-radius:50%;background:var(--accent);
+  color:var(--accent-ink);font-size:11px;font-weight:700;flex:none;
+}
+label.fld{display:block;margin:0 0 12px}
+label.fld > span{display:block;font-size:12px;color:var(--sub);margin-bottom:5px;font-weight:600}
+input[type=text],input[type=number],input[type=search],select,textarea{
+  width:100%; font:inherit; font-size:15px; color:var(--ink); background:var(--bg);
+  border:1px solid var(--line); border-radius:8px; padding:9px 10px;
+}
+textarea{min-height:110px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row > *{flex:1 1 150px;min-width:0}
+.btn{
+  appearance:none;font:inherit;font-size:14px;font-weight:600;cursor:pointer;
+  border-radius:8px;padding:10px 14px;border:1px solid var(--line);
+  background:var(--panel);color:var(--ink);
+  text-decoration:none;display:inline-flex;align-items:center;justify-content:center;
+}
+.btn:focus-visible,.opt:focus-visible,.pick:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.wide{width:100%}
+.btn.sm{padding:5px 9px;font-size:12px;font-weight:600}
+.btn.danger{color:var(--danger);border-color:var(--line)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{
+  flex:1;appearance:none;border:0;border-right:1px solid var(--line);background:var(--panel);
+  color:var(--sub);font:inherit;font-size:14px;font-weight:600;padding:9px 2px;cursor:pointer;
+}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.pickgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.pick{
+  display:flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:9px;
+  padding:9px 10px;cursor:pointer;background:var(--bg);user-select:none;
+}
+.pick[data-on="1"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.pick input{width:17px;height:17px;flex:none;accent-color:var(--accent);margin:0}
+.pick .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pick .sub{font-size:11px;color:var(--sub);font-weight:400}
+.assign{border:1px solid var(--line);border-radius:10px;padding:11px;margin-bottom:9px;background:var(--bg)}
+.assign .who{font-weight:700;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.opts{display:flex;gap:7px;flex-wrap:wrap}
+.opt{
+  border:1px solid var(--line);border-radius:999px;padding:6px 13px;font-size:13px;
+  cursor:pointer;background:var(--panel);font-weight:600;color:var(--sub);
+}
+.opt[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.opt.other[aria-pressed="true"]{background:var(--warn);border-color:var(--warn);color:var(--on-car)}
+.tripbar{display:flex;align-items:center;gap:9px;padding:7px 12px;background:var(--chip);
+  border-top:1px solid var(--line);font-size:12px;color:var(--sub);font-weight:600}
+.tripbar .tag{font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--accent-ink);
+  background:var(--accent);border-radius:999px;padding:1px 9px;flex:none}
+.tripbar .tm{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:400}
+.triplinks{display:flex;gap:8px;padding:9px 12px;flex-wrap:wrap}
+.carcard{border:1px solid var(--line);border-radius:12px;margin-bottom:14px;overflow:hidden;background:var(--bg)}
+.carhead{padding:10px 12px;color:var(--on-car);display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.carhead b{font-size:15px}
+.carhead .tm{font-size:12px;opacity:.95;font-variant-numeric:tabular-nums}
+.leg{display:flex;gap:10px;padding:9px 12px;border-top:1px solid var(--line);align-items:flex-start}
+.leg:first-of-type{border-top:0}
+.leg .idx{
+  flex:none;width:22px;height:22px;border-radius:50%;background:var(--chip);color:var(--sub);
+  font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:2px;
+}
+.leg .bd{flex:1;min-width:0}
+.leg .pl{font-weight:700}
+.leg .pp{font-size:12.5px;color:var(--sub);margin-top:1px}
+.leg .mv{flex:none;display:flex;gap:4px;align-items:center}
+.leg.origin .idx{background:transparent;color:var(--sub);font-size:14px}
+.dur{font-size:11.5px;color:var(--sub);padding:2px 12px 2px 44px;font-variant-numeric:tabular-nums}
+.note{font-size:12.5px;color:var(--sub);margin:8px 0 0}
+.warnbox{border-left:3px solid var(--warn);background:color-mix(in srgb,var(--warn) 10%,transparent);
+  padding:9px 11px;border-radius:0 8px 8px 0;font-size:13px;margin:10px 0}
+.errbox{border-left:3px solid var(--danger);background:color-mix(in srgb,var(--danger) 10%,transparent);
+  padding:9px 11px;border-radius:0 8px 8px 0;font-size:13px;margin:10px 0}
+.okbox{border-left:3px solid var(--ok);background:color-mix(in srgb,var(--ok) 10%,transparent);
+  padding:9px 11px;border-radius:0 8px 8px 0;font-size:13px;margin:10px 0}
+table.list{width:100%;border-collapse:collapse;font-size:13.5px}
+table.list th{text-align:left;font-size:11px;color:var(--sub);border-bottom:1px solid var(--line);padding:6px 6px;font-weight:700}
+table.list td{border-bottom:1px solid var(--line);padding:8px 6px;vertical-align:middle}
+table.list td.act{text-align:right;white-space:nowrap;width:1%}
+.empty{color:var(--sub);font-size:13px;text-align:center;padding:22px 0}
+.hint{font-size:12px;color:var(--sub);margin-top:5px}
+dialog{
+  border:1px solid var(--line);border-radius:14px;padding:0;background:var(--panel);color:var(--ink);
+  width:min(460px,calc(100vw - 24px));box-shadow:0 20px 50px rgba(0,0,0,.3);
+}
+dialog::backdrop{background:rgba(8,14,20,.55)}
+dialog .dlg{padding:16px}
+dialog h3{margin:0 0 12px;font-size:15px}
+.dlgfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.stickybar{
+  position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--panel);
+  border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+}
+.stickybar .inner{max-width:780px;margin:0 auto;display:flex;gap:9px;align-items:center}
+.stickybar .cnt{font-size:12.5px;color:var(--sub);flex:none}
+.adminview{position:fixed;inset:0;z-index:90;background:var(--bg);overflow-y:auto;
+  -webkit-overflow-scrolling:touch}
+.adminbar{position:sticky;top:0;z-index:2;background:var(--panel);border-bottom:1px solid var(--line);
+  padding:11px 0}
+.adminbar .inner{max-width:780px;margin:0 auto;padding:0 14px;display:flex;align-items:center;
+  justify-content:space-between;gap:10px}
+.adminbar b{font-size:15px}
+#appTitle{cursor:default;-webkit-tap-highlight-color:transparent;user-select:none}
+.lockscreen{position:fixed;inset:0;z-index:100;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;padding:20px}
+.lockcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:22px;width:min(360px,100%);box-shadow:var(--shadow)}
+.lockcard h2{margin:0 0 6px;font-size:17px}
+.lockcard p{margin:0 0 16px;font-size:13px;color:var(--sub)}
+.lockerr{color:var(--danger) !important;font-size:13px;margin:0 0 12px !important}
+.hidden{display:none !important}
+.badge{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--chip);color:var(--sub);margin-left:6px}
+.badge.on{background:color-mix(in srgb,var(--ok) 22%,transparent);color:var(--ok)}
+.foot{font-size:11.5px;color:var(--sub);text-align:center;padding:6px 0 0}
+</style>
+</head>
+<body>
+<header>
+  <div class="inner">
+    <h1 id="appTitle">送迎順路メーカー<span id="hdrMode"></span></h1>
+    <nav role="tablist">
+      <button role="tab" data-tab="plan" aria-selected="true">送迎を組む</button>
+      <button role="tab" data-tab="master" aria-selected="false">スタッフ・場所</button>
+      <button role="tab" data-tab="pw" aria-selected="false">パスワード</button>
+    </nav>
+  </div>
+</header>
+<div class="wrap">
+
+<!-- ============ PLAN ============ -->
+<div id="tab-plan">
+  <section class="card">
+    <h2><span class="step-no">1</span>今日の条件</h2>
+    <div class="row">
+      <label class="fld"><span>出発地点</span><select id="originSel"></select></label>
+      <label class="fld"><span>使う車の台数</span>
+        <div class="seg" id="carSeg">
+          <button data-n="1" aria-pressed="true">1台</button>
+          <button data-n="2" aria-pressed="false">2台</button>
+          <button data-n="3" aria-pressed="false">3台</button>
+        </div>
+      </label>
+    </div>
+    <div class="hint">1台につき最大 <b id="capLabel">4</b> 人まで（運転手を除く）。</div>
+  </section>
+
+  <section class="card">
+    <h2><span class="step-no">2</span>今日の出勤者を選ぶ</h2>
+    <input type="search" id="staffSearch" placeholder="名前で絞り込み">
+    <div class="row" style="margin:10px 0 12px">
+      <button class="btn sm" id="clearStaff" style="flex:0 0 auto">選択を全部外す</button>
+      <span class="cnt hint" id="staffCount" style="flex:1;text-align:right;align-self:center"></span>
+    </div>
+    <div class="pickgrid" id="staffGrid"></div>
+    <p class="empty hidden" id="staffEmpty">スタッフが未登録です。「スタッフ・場所」タブから登録してください。</p>
+  </section>
+
+  <section class="card hidden" id="secAssign">
+    <h2><span class="step-no">3</span>送迎場所を決める</h2>
+    <div id="assignList"></div>
+  </section>
+
+  <section class="card hidden" id="secResult">
+    <h2><span class="step-no">4</span>順路</h2>
+    <div id="resultBox"></div>
+  </section>
+</div>
+
+<!-- ============ MASTER ============ -->
+<div id="tab-master" class="hidden">
+  <section class="card">
+    <h2>スタッフ</h2>
+    <table class="list"><thead><tr><th>名前</th><th>送迎場所の候補</th><th class="act"></th></tr></thead>
+      <tbody id="staffTable"></tbody></table>
+    <p class="empty hidden" id="staffTableEmpty">まだ登録がありません</p>
+    <button class="btn wide primary" id="addStaff" style="margin-top:12px">＋ スタッフを追加</button>
+  </section>
+
+  <section class="card">
+    <h2>送迎場所</h2>
+    <input type="search" id="locSearch" placeholder="場所名で絞り込み">
+    <table class="list" style="margin-top:10px"><thead><tr><th>場所</th><th>住所・座標</th><th class="act"></th></tr></thead>
+      <tbody id="locTable"></tbody></table>
+    <button class="btn wide primary" id="addLoc" style="margin-top:12px">＋ 場所を追加</button>
+    <p class="hint">場所は住所で検索して登録できます。ピンポイントで指定したいときは、
+      Googleマップで地点を右クリック →「座標をコピー」で出る座標を直接入力することもできます。</p>
+  </section>
+</div>
+
+<!-- ============ USER PASSWORD ============ -->
+<div id="tab-pw" class="hidden">
+  <section class="card">
+    <h2>アプリを開くパスワード<span class="badge" id="userPwBadge">未設定</span></h2>
+    <div id="userPwOn" class="hidden">
+      <p class="note">担当者みんなで使う共通のパスワードです。アプリを開くときと、
+        ほかの端末で名簿を見るときに使います。</p>
+      <button class="btn primary wide" id="userChangePw" style="margin:12px 0">パスワードを変更する</button>
+      <p class="hint">変更したら、ほかの担当者にも新しいパスワードを伝えてください。
+        伝わるまでの間、その人はアプリを開けなくなります。</p>
+    </div>
+    <div id="userPwOff" class="hidden">
+      <p class="note">担当者みんなで使う共通のパスワードです。設定すると、次回からアプリを開くときに必要になります。</p>
+      <label class="fld"><span>新しいパスワード（8文字以上）</span>
+        <input type="password" id="initPw1" autocomplete="new-password"></label>
+      <label class="fld"><span>確認のためもう一度</span>
+        <input type="password" id="initPw2" autocomplete="new-password"></label>
+      <button class="btn primary wide" id="initSetPw">パスワードを設定する</button>
+    </div>
+  </section>
+</div>
+
+<!-- ============ SETTINGS ============ -->
+</div><!-- /wrap -->
+
+<div class="lockscreen hidden" id="lock">
+  <form class="lockcard" id="lockForm">
+    <h2>送迎順路メーカー</h2>
+    <p>この端末の名簿はパスワードで保護されています。</p>
+    <label class="fld"><span>パスワード（またはマスターコード）</span>
+      <input type="password" id="lockPw" autocomplete="current-password" autofocus></label>
+    <p class="lockerr hidden" id="lockErr"></p>
+    <button class="btn primary wide" type="submit" id="lockGo">開く</button>
+    <button class="btn wide" type="button" id="lockForgot" style="margin-top:8px">パスワードを忘れた</button>
+  </form>
+</div>
+
+<div id="admin" class="adminview hidden">
+  <div class="adminbar">
+    <div class="inner">
+      <b>管理画面</b>
+      <button class="btn sm" id="adminClose">アプリに戻る</button>
+    </div>
+  </div>
+  <div class="wrap" style="padding-top:0">
+
+  <section class="card">
+    <h2>順路の計算</h2>
+    <label class="fld"><span>最適化の基準</span>
+      <select id="objSel">
+        <option value="dropoff">全員を降ろし終わるまでを最短にする</option>
+        <option value="return">出発地点に戻るまでを最短にする</option>
+      </select>
+    </label>
+    <div class="row">
+      <label class="fld"><span>1台あたりの定員（人）</span><input type="number" id="capInput" min="1" max="8" step="1"></label>
+      <label class="fld"><span>1か所あたりの停車時間（分）</span><input type="number" id="stopInput" min="0" max="30" step="1"></label>
+    </div>
+    <div class="row">
+      <label class="fld"><span>近距離の平均速度（km/h）</span><input type="number" id="speedCityInput" min="5" max="60" step="1"></label>
+      <label class="fld"><span>遠距離の平均速度（km/h）</span><input type="number" id="speedFarInput" min="5" max="90" step="1"></label>
+    </div>
+    <label class="fld"><span>道のり係数（直線距離の何倍か）</span><input type="number" id="detourInput" min="1" max="2.5" step="0.05"></label>
+    <p class="hint"><b>下のGoogle連携を設定していれば、この2つはほとんど使われません。</b>
+      実測値がまだ無い区間だけ、この値で概算します。数kmの移動は市街地で遅く、20km超は幹線道路で
+      速くなるため2段階に分けています。</p>
+  </section>
+
+  <section class="card">
+    <h2>Googleマップの実測所要時間<span class="badge" id="apiBadge">未設定</span></h2>
+    <div class="okbox">
+      <b>ここで一度キーを入れれば、担当者は何も意識せずに実測値で計算されます。</b>
+      取得した所要時間は保存され、共有中ならほかの担当者にも自動で配られます。
+      場所を追加したときも、順路を作るときに足りない区間だけ自動で取りに行きます。
+      キーを入れなければ、直線距離からの概算で動きます。
+    </div>
+    <label class="fld"><span>Google Maps Platform APIキー</span>
+      <input type="text" id="apiKey" placeholder="AIza..." autocomplete="off" spellcheck="false"></label>
+    <div class="row">
+      <button class="btn primary" id="fetchMatrix">全地点ぶんを取り直す</button>
+      <button class="btn danger" id="clearMatrix">取得済みデータを消す</button>
+    </div>
+    <p class="hint">ふだんは押す必要はありません。渋滞事情が変わったときなどに使ってください。</p>
+    <div id="matrixStatus" class="note"></div>
+    <div class="warnbox" style="margin-top:12px">
+      <b>課金事故を防ぐ設定を必ず。</b> Google Cloud コンソールで、このキーに
+      ①「ウェブサイトの制限」でこのアプリのURLのみ許可 ②「Routes API」のみ許可 ③1日の割り当て上限、を設定してください。
+      キーはこの端末のブラウザにのみ保存され、どこにも送信されません。
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>データの保存・移行</h2>
+    <p class="note">スタッフ・場所・設定は、この端末のブラウザに保存されます。</p>
+    <div style="border:1px solid var(--line);border-radius:10px;padding:12px;margin:12px 0">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <b style="font-size:13px">みんなで共有する</b><span class="badge" id="shareBadge">未設定</span>
+      </div>
+      <p class="hint" style="margin:0 0 10px">
+        名簿・場所・設定を全員で共有します。誰が編集しても、ほかの担当者のアプリに反映されます。
+        <b>暗号化したまま預けるので、保管先にも中身は読めません。</b></p>
+      <div id="shareOff">
+        <p class="hint" style="margin:0 0 8px">
+          <b>最初の1人</b>は、先にパスワードを設定してから設定を貼り付けてください。<br>
+          <b>あとから参加する人</b>は、設定を貼り付けるだけです（共有中のパスワードを聞かれます）。</p>
+        <label class="fld"><span>Firebase の設定（apiKey と projectId が入っていれば貼り付け方は自由）</span>
+          <textarea id="shareCfgIn" placeholder='const firebaseConfig = {
+  apiKey: "AIza...",
+  projectId: "shuttle-router-xxxxx",
+  ...
+};' style="min-height:110px"></textarea></label>
+        <button class="btn primary wide" id="shareOn">共有を始める</button>
+        <details style="margin-top:10px">
+          <summary style="cursor:pointer;font-size:12.5px;color:var(--sub)">Firebase の準備手順</summary>
+          <ol style="font-size:12.5px;color:var(--sub);padding-left:1.2em;line-height:1.9">
+            <li><a href="https://console.firebase.google.com/" target="_blank" rel="noopener">Firebase コンソール</a>で「プロジェクトを追加」</li>
+            <li>「Firestore Database」→「データベースの作成」→ 本番環境モード</li>
+            <li>「Authentication」→「始める」→「匿名」を有効にする</li>
+            <li>Firestore の「ルール」を下記に置き換えて公開</li>
+            <li>「プロジェクトの設定」→ マイアプリ →「ウェブ」を追加し、表示された設定を上の欄に貼る</li>
+          </ol>
+          <textarea readonly style="min-height:120px;font-size:11px">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /shuttle/{doc} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}</textarea>
+        </details>
+      </div>
+      <div id="shareOnBox" class="hidden">
+        <p class="note" id="shareStatus"></p>
+        <div class="row">
+          <button class="btn" id="syncNow">今すぐ同期</button>
+          <button class="btn danger" id="shareStop">共有をやめる</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="border:1px solid var(--line);border-radius:10px;padding:12px;margin:12px 0">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <b style="font-size:13px">パスワード保護</b><span class="badge" id="pwBadge">未設定</span>
+      </div>
+      <p class="hint" style="margin:0 0 10px">
+        担当者が「パスワード」タブから設定・変更します。設定されると名簿が暗号化され、
+        アプリを開くたびにパスワードを聞くようになります。管理者はここのマスターコードで、
+        パスワードを知らなくてもいつでも開けます。
+      </p>
+      <div class="row">
+        <button class="btn" id="newMaster">マスターコードを作り直す</button>
+        <button class="btn danger" id="clearPw">保護を解除</button>
+      </div>
+    </div>
+    <button class="btn primary wide" id="makeLink" style="margin:10px 0">別の端末に移すリンクを作る</button>
+    <div id="linkBox" class="hidden">
+      <label class="fld"><span>このリンクを送った先で開くと、名簿がそのまま移ります</span>
+        <textarea id="linkOut" readonly style="min-height:80px"></textarea></label>
+      <div class="row">
+        <button class="btn" id="copyLink">リンクをコピー</button>
+      </div>
+      <p class="hint" id="linkNote"></p>
+    </div>
+    <details style="margin-top:14px">
+      <summary style="cursor:pointer;font-size:12.5px;color:var(--sub)">JSONで書き出す・読み込む（バックアップ用）</summary>
+      <div class="row" style="margin:10px 0">
+        <button class="btn" id="exportBtn">データを書き出す</button>
+        <button class="btn" id="importBtn">データを読み込む</button>
+      </div>
+    </details>
+    <textarea id="dataArea" class="hidden" placeholder="ここにJSONが表示されます / 貼り付けて「読み込む」"></textarea>
+    <button class="btn danger wide" id="resetBtn" style="margin-top:12px">初期状態に戻す</button>
+  </section>
+  <p class="foot">送迎順路メーカー</p>
+  </div>
+</div>
+
+<div class="stickybar hidden" id="bar">
+  <div class="inner">
+    <span class="cnt" id="barCnt"></span>
+    <button class="btn primary" id="buildBtn" style="flex:1">順路を作成</button>
+  </div>
+</div>
+
+<dialog id="dlg"><form method="dialog" class="dlg" id="dlgForm">
+  <h3 id="dlgTitle">編集</h3>
+  <div id="dlgBody"></div>
+  <div class="dlgfoot">
+    <button class="btn" value="cancel">キャンセル</button>
+    <button class="btn primary" value="ok" id="dlgOk">保存</button>
+  </div>
+</form></dialog>
+
+<script>
+"use strict";
+/* ==========================================================================
+   送迎順路メーカー
+   - データは localStorage に保存（サーバー不要）
+   - 所要時間は「内蔵推定」または「Google実測値のキャッシュ」
+   ========================================================================== */
+
+const KEY = "shuttle-router.v1";
+
+/* ---- 初期データ ------------------------------------------------------- */
+const SEED_LOCS = [
+  ["nakano","中野駅",35.7056,139.6659],
+  ["nakanosakaue","中野坂上駅",35.6976,139.6836],
+  ["shinnakano","新中野駅",35.6957,139.6716],
+  ["higashinakano","東中野駅",35.7069,139.6837],
+  ["koenji","高円寺駅",35.7056,139.6497],
+  ["asagaya","阿佐ヶ谷駅",35.7046,139.6359],
+  ["ogikubo","荻窪駅",35.7046,139.6202],
+  ["nishiogikubo","西荻窪駅",35.7038,139.5996],
+  ["kichijoji","吉祥寺駅",35.7031,139.5800],
+  ["mitaka","三鷹駅",35.7027,139.5604],
+  ["kokubunji","国分寺駅",35.7003,139.4805],
+  ["tachikawa","立川駅",35.6980,139.4137],
+  ["shinjuku","新宿駅",35.6896,139.7006],
+  ["ikebukuro","池袋駅",35.7295,139.7109],
+  ["shibuya","渋谷駅",35.6580,139.7016],
+  ["tokyo","東京駅",35.6812,139.7671],
+  ["shinagawa","品川駅",35.6284,139.7387],
+  ["nerima","練馬駅",35.7359,139.6543],
+  ["nakamurabashi","中村橋駅",35.7367,139.6427],
+  ["akabane","赤羽駅",35.7780,139.7210],
+  ["omiya","大宮駅",35.9065,139.6238],
+  ["musashikosugi","武蔵小杉駅",35.5766,139.6595],
+  ["kawasaki","川崎駅",35.5308,139.6970],
+  ["yokohama","横浜駅",35.4657,139.6220],
+].map(([id,name,lat,lng]) => ({id:"loc_"+id, name, lat, lng}));
+
+const SEED_STAFF = [
+  {id:"stf_a", name:"Aさん", locIds:["loc_nakanosakaue"]},
+  {id:"stf_b", name:"Bさん", locIds:["loc_shinjuku","loc_mitaka"]},
+  {id:"stf_c", name:"Cさん", locIds:["loc_omiya"]},
+  {id:"stf_d", name:"Dさん", locIds:["loc_musashikosugi"]},
+];
+
+const DEFAULT_SETTINGS = {
+  originId:"loc_nakano", cars:1, capacity:4, stopMin:2,
+  speedCity:16, speedFar:38, detour:1.35, objective:"dropoff", apiKey:"",
+};
+
+function freshDB(){
+  return {locs:SEED_LOCS.map(o=>({...o})), staff:SEED_STAFF.map(o=>({...o,locIds:[...o.locIds]})),
+          settings:{...DEFAULT_SETTINGS}, matrix:{}, matrixAt:null};
+}
+
+/* ---- 状態 -------------------------------------------------------------- */
+let db = load();
+/** 今日の入力（保存しない）: selected=出勤者ID / choice={staffId:locId} */
+const session = {selected:new Set(), choice:{}, plan:null};
+
+/** 保存されているのが暗号化データなら、その中身を返す（旧形式 enc:1 も含む） */
+function storedEnvelope(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(!raw) return null;
+    const d = JSON.parse(raw);
+    if(!d || !d.enc || !d.iv || !d.ct) return null;
+    if(d.enc === 1) return d.salt ? d : null;
+    return d.wraps ? d : null;
+  }catch(e){ return null; }
+}
+
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(!raw) return freshDB();
+    const d = JSON.parse(raw);
+    if(d && d.enc) return freshDB();         // 復号前。解錠後に読み直す
+    const base = freshDB();
+    return {
+      locs: Array.isArray(d.locs) && d.locs.length ? d.locs : base.locs,
+      staff: Array.isArray(d.staff) ? d.staff : base.staff,
+      settings: {...DEFAULT_SETTINGS, ...(d.settings||{})},
+      matrix: (d.matrix && typeof d.matrix === "object") ? d.matrix : {},
+      matrixAt: d.matrixAt || null,
+    };
+  }catch(e){ console.warn("読み込みに失敗、初期データを使います", e); return freshDB(); }
+}
+function saveLocal(){
+  try{
+    localStorage.setItem(KEY, dataKey ? JSON.stringify(lastEnvelope) : JSON.stringify(db));
+    return true;
+  }catch(e){ console.warn("localStorage への保存に失敗", e); return false; }
+}
+/** 暗号化ありのときは非同期で書き直す（保存は毎回ここを通る） */
+let saveTimer = null;
+function persist(){
+  if(!dataKey) return saveLocal();
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try{
+      lastEnvelope = await sealDb();
+      saveLocal();
+      scheduleSync();
+    }catch(e){ console.error("暗号化して保存できませんでした", e); }
+  }, 120);
+  return true;
+}
+function save(){
+  if(!persist()) alert("この端末に保存できませんでした（プライベートモードや保存容量をご確認ください）");
+}
+const uid = p => p + "_" + Math.random().toString(36).slice(2,9);
+const locById = id => db.locs.find(l => l.id === id) || null;
+const staffById = id => db.staff.find(s => s.id === id) || null;
+const locName = id => (locById(id)?.name) ?? "(削除された場所)";
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+
+/* ---- 所要時間 ---------------------------------------------------------- */
+const mKey = (a,b) => a + ">" + b;
+
+function haversineKm(a,b){
+  const R = 6371, rad = Math.PI/180;
+  const dLat = (b.lat-a.lat)*rad, dLng = (b.lng-a.lng)*rad;
+  const la1 = a.lat*rad, la2 = b.lat*rad;
+  const h = Math.sin(dLat/2)**2 + Math.cos(la1)*Math.cos(la2)*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+/**
+ * a→b の移動秒数。Google実測値があればそれを、無ければ距離から推定する。
+ * 推定は「短い移動ほど遅く、長い移動ほど速い」現実に合わせ、道のりが伸びるほど
+ * 平均速度が speedCity から speedFar へ近づくモデルを使う（半減距離 HALF_KM）。
+ * 単一の平均速度だと近距離が速すぎ・遠距離が遅すぎになるため。
+ */
+const HALF_KM = 8;
+function estimateSec(km){
+  const {speedCity, speedFar} = db.settings;
+  const vLo = Math.max(1, speedCity || 16);
+  const vHi = Math.max(vLo, speedFar || 38);
+  const v = vLo + (vHi - vLo) * km / (km + HALF_KM);
+  return km / v * 3600;
+}
+function travelSec(aId, bId){
+  if(aId === bId) return 0;
+  const m = db.matrix[mKey(aId,bId)];
+  if(typeof m === "number") return m;
+  const a = locById(aId), b = locById(bId);
+  if(!a || !b) return 0;
+  return estimateSec(haversineKm(a,b) * (db.settings.detour || 1.35));
+}
+/** その区間がGoogle実測値かどうか */
+const isMeasured = (aId,bId) => aId === bId || typeof db.matrix[mKey(aId,bId)] === "number";
+
+function fmtMin(sec){
+  const m = Math.round(sec/60);
+  if(m < 60) return m + "分";
+  return Math.floor(m/60) + "時間" + String(m%60).padStart(2,"0") + "分";
+}
+
+/* ==========================================================================
+   最適化
+   停車地点は最大12（3台×4人）。部分集合ごとの最短巡回を総当たりで求め、
+   集合分割DPで「最も遅く終わる車の時間」が最小になる割当を厳密に選ぶ。
+   ========================================================================== */
+
+/** 1台分の経路を評価する（順路は stops の配列順） */
+function evalRoute(originId, stops){
+  const stopSec = (db.settings.stopMin || 0) * 60;
+  const legs = [];
+  let prev = originId, t = 0;
+  for(const st of stops){
+    const drive = travelSec(prev, st.locId);
+    t += drive + stopSec;
+    legs.push({from:prev, to:st.locId, driveSec:drive, arriveSec:t, measured:isMeasured(prev, st.locId)});
+    prev = st.locId;
+  }
+  const backSec = stops.length ? travelSec(prev, originId) : 0;
+  return {legs, dropoffSec:t, returnSec:t + backSec, backSec};
+}
+
+/** stops の最短順路を求める（n<=7 は総当たり、それ以上は最近傍+2-opt） */
+function bestOrder(originId, stops, objective){
+  const score = arr => {
+    const r = evalRoute(originId, arr);
+    return objective === "return" ? r.returnSec : r.dropoffSec;
+  };
+  const n = stops.length;
+  if(n <= 1) return {order:stops.slice(), cost:score(stops)};
+
+  if(n <= 7){
+    let best = null, bestCost = Infinity;
+    const cur = [], used = new Array(n).fill(false);
+    (function permute(){
+      if(cur.length === n){
+        const c = score(cur);
+        if(c < bestCost){ bestCost = c; best = cur.slice(); }
+        return;
+      }
+      for(let i=0;i<n;i++){
+        if(used[i]) continue;
+        used[i] = true; cur.push(stops[i]);
+        permute();
+        cur.pop(); used[i] = false;
+      }
+    })();
+    return {order:best, cost:bestCost};
+  }
+
+  // 最近傍法で初期解 → 2-opt で改善
+  const rest = stops.slice(), order = [];
+  let cur = originId;
+  while(rest.length){
+    let bi = 0, bd = Infinity;
+    rest.forEach((s,i) => { const d = travelSec(cur, s.locId); if(d < bd){ bd = d; bi = i; } });
+    cur = rest[bi].locId; order.push(rest.splice(bi,1)[0]);
+  }
+  let cost = score(order), improved = true;
+  while(improved){
+    improved = false;
+    for(let i=0;i<order.length-1;i++){
+      for(let j=i+1;j<order.length;j++){
+        const cand = order.slice(0,i).concat(order.slice(i,j+1).reverse(), order.slice(j+1));
+        const c = score(cand);
+        if(c < cost - 0.001){ order.splice(0, order.length, ...cand); cost = c; improved = true; }
+      }
+    }
+  }
+  return {order, cost};
+}
+
+/**
+ * 1便ぶんの割当を解く（人数は 台数×定員 以内であること）。
+ * @param assignments [{staffId, locId}]
+ * @returns {ok:true, cars:[{stops:[{locId,staffIds}]}]} | {ok:false, message}
+ */
+function solveRound(assignments, objective){
+  const {originId, cars:K, capacity:cap} = db.settings;
+
+  // 同じ場所の人はまとめて1つの停車地点に。定員を超える場合だけ分割する。
+  const byLoc = new Map();
+  for(const a of assignments){
+    if(!byLoc.has(a.locId)) byLoc.set(a.locId, []);
+    byLoc.get(a.locId).push(a.staffId);
+  }
+  const stops = [];
+  for(const [locId, ids] of byLoc){
+    for(let i=0;i<ids.length;i+=cap) stops.push({locId, staffIds:ids.slice(i, i+cap)});
+  }
+
+  const n = stops.length;
+  const full = (1 << n) - 1;
+  const demand = stops.map(s => s.staffIds.length);
+
+  // 定員に収まる部分集合それぞれの最短順路
+  const sub = new Array(full + 1).fill(null);
+  for(let mask = 1; mask <= full; mask++){
+    let d = 0, list = [];
+    for(let i=0;i<n;i++) if(mask & (1<<i)){ d += demand[i]; list.push(stops[i]); }
+    if(d > cap) continue;
+    const r = bestOrder(originId, list, objective);
+    sub[mask] = {order:r.order, cost:r.cost};
+  }
+
+  // 集合分割DP: dp[j][mask] = j台でmaskを配り切ったときの (最大車時間, 合計時間)
+  let dp = new Array(full + 1).fill(null);
+  dp[0] = {mk:0, tot:0, parts:[]};
+  let best = null;
+  for(let j=1;j<=K;j++){
+    const next = new Array(full + 1).fill(null);
+    for(let mask=1; mask<=full; mask++){
+      const low = mask & (-mask);
+      for(let s = mask; s > 0; s = (s - 1) & mask){
+        if(!(s & low)) continue;          // 対称性の除去
+        if(!sub[s]) continue;
+        const prev = dp[mask ^ s];
+        if(!prev) continue;
+        const mk = Math.max(prev.mk, sub[s].cost);
+        const tot = prev.tot + sub[s].cost;
+        const cur = next[mask];
+        if(!cur || mk < cur.mk - 0.001 || (Math.abs(mk - cur.mk) <= 0.001 && tot < cur.tot - 0.001)){
+          next[mask] = {mk, tot, parts:prev.parts.concat([s])};
+        }
+      }
+    }
+    dp = next;
+    const cand = dp[full];
+    if(cand && (!best || cand.mk < best.mk - 0.001 ||
+       (Math.abs(cand.mk - best.mk) <= 0.001 && cand.tot < best.tot - 0.001))){
+      best = cand;
+    }
+  }
+  if(!best) return {ok:false, message:"条件を満たす割り当てが見つかりませんでした。定員や台数を見直してください。"};
+
+  const built = best.parts.map(mask => ({stops: sub[mask].order.slice()}));
+  // 出発地点から遠い方面の車を先に並べると読みやすい
+  built.sort((a,b) => evalRoute(originId, b.stops).dropoffSec - evalRoute(originId, a.stops).dropoffSec);
+  return {ok:true, cars:built};
+}
+
+/**
+ * 全体の計画を立てる。
+ *
+ * 人数が 台数×定員 に収まるなら1便で終わり（従来どおり）。超える場合は、車が
+ * 出発地点に戻って積み直す「便」に分ける。車どうしは待ち合わせないので、全体の
+ * 所要時間は便ごとの合計ではなく「いちばん遅く終わる車の合計」になる。
+ *
+ * 停車地点が EXACT_MAX 以下なら、便の分け方・車への割り振り・車内の順番まで
+ * まとめて厳密に最適化する。それを超える場合は方面ごとにまとめる近似で組む。
+ *
+ * @returns {ok:true, cars:[{trips:[{stops:[{locId,staffIds}]}]}]} | {ok:false, message}
+ */
+const EXACT_MAX = 13;
+
+function buildStops(assignments, cap){
+  const byLoc = new Map();
+  for(const a of assignments){
+    if(!byLoc.has(a.locId)) byLoc.set(a.locId, []);
+    byLoc.get(a.locId).push(a.staffId);
+  }
+  const stops = [];
+  for(const [locId, ids] of byLoc)
+    for(let i = 0; i < ids.length; i += cap) stops.push({locId, staffIds:ids.slice(i, i + cap)});
+  return stops;
+}
+
+function planRoutes(assignments){
+  const {originId, cars:K, capacity:cap, objective} = db.settings;
+  if(!locById(originId)) return {ok:false, message:"出発地点が設定されていません。"};
+  if(!assignments.length) return {ok:false, message:"送迎する人がいません。"};
+  if(cap < 1 || K < 1) return {ok:false, message:"車の台数と定員を1以上にしてください。"};
+
+  // 1便で運びきれるなら従来どおり
+  if(assignments.length <= K * cap){
+    const r = solveRound(assignments, objective);
+    if(!r.ok) return r;
+    return {ok:true, cars:r.cars.map(c => ({trips:[{stops:c.stops}]}))};
+  }
+
+  const stops = buildStops(assignments, cap);
+  const cars = stops.length <= EXACT_MAX
+    ? multiTripExact(stops, K, cap, objective, originId)
+    : multiTripApprox(stops, K, cap, objective, originId);
+  if(!cars) return {ok:false, message:"順路を組めませんでした。台数や定員を見直してください。"};
+  return {ok:true, cars};
+}
+
+/** 1台がその集合を運びきるのに必要な最短時間を、便の分け方込みで求める */
+function carCostTable(stops, cap, objective, originId){
+  const n = stops.length, full = (1 << n) - 1;
+  const demand = stops.map(s => s.staffIds.length);
+
+  // 定員に収まる部分集合ごとに、片道（降車完了）と往復（帰着）それぞれの最短順路
+  const one = new Array(full + 1).fill(null);
+  for(let mask = 1; mask <= full; mask++){
+    let d = 0; const list = [];
+    for(let i = 0; i < n; i++) if(mask & (1 << i)){ d += demand[i]; list.push(stops[i]); }
+    if(d > cap) continue;
+    const open = bestOrder(originId, list, "dropoff");
+    const ret  = bestOrder(originId, list, "return");
+    one[mask] = {openOrder:open.order, openCost:open.cost, retOrder:ret.order, retCost:ret.cost};
+  }
+
+  // dp[mask][0] = すべての便が戻ってくる場合の合計
+  // dp[mask][1] = どれか1便だけ戻らない（最終便になる）場合の合計
+  const INF = Infinity;
+  const dp = [new Float64Array(full + 1).fill(INF), new Float64Array(full + 1).fill(INF)];
+  const from = [new Int32Array(full + 1).fill(-1), new Int32Array(full + 1).fill(-1)];
+  const openedAt = new Int32Array(full + 1).fill(-1);   // dp[mask][1] でどれを最終便にしたか
+  dp[0][0] = 0;
+
+  for(let mask = 1; mask <= full; mask++){
+    const low = mask & (-mask);
+    for(let sub = mask; sub > 0; sub = (sub - 1) & mask){
+      if(!(sub & low)) continue;            // 対称性の除去
+      const o = one[sub];
+      if(!o) continue;
+      const rest = mask ^ sub;
+      if(dp[0][rest] + o.retCost < dp[0][mask]){
+        dp[0][mask] = dp[0][rest] + o.retCost;
+        from[0][mask] = sub;
+      }
+      if(dp[1][rest] + o.retCost < dp[1][mask]){
+        dp[1][mask] = dp[1][rest] + o.retCost;
+        from[1][mask] = sub; openedAt[mask] = -1;
+      }
+      if(dp[0][rest] + o.openCost < dp[1][mask]){
+        dp[1][mask] = dp[0][rest] + o.openCost;
+        from[1][mask] = sub; openedAt[mask] = sub;
+      }
+    }
+  }
+  // 「帰着まで最短」を選んでいるときは最終便も戻る
+  const cost = objective === "return" ? dp[0] : dp[1];
+
+  /** mask を便の列に分解する（最終便を最後に置く） */
+  const decompose = mask => {
+    const trips = [];
+    let last = null;
+    let flag = objective === "return" ? 0 : 1;
+    let m = mask;
+    while(m){
+      const sub = from[flag][m];
+      if(sub < 0 || !one[sub]) return null;
+      const isOpen = flag === 1 && openedAt[m] === sub;
+      if(isOpen){ last = {stops:one[sub].openOrder.slice()}; flag = 0; }
+      else trips.push({stops:one[sub].retOrder.slice()});
+      m ^= sub;
+    }
+    if(last) trips.push(last);
+    return trips;
+  };
+  return {cost, decompose};
+}
+
+function multiTripExact(stops, K, cap, objective, originId){
+  const n = stops.length, full = (1 << n) - 1;
+  const {cost, decompose} = carCostTable(stops, cap, objective, originId);
+
+  // いちばん遅い車が最短になるように、停車地点を車へ配る
+  let dp = new Array(full + 1).fill(null);
+  dp[0] = {mk:0, tot:0, parts:[]};
+  let best = null;
+  for(let k = 1; k <= K; k++){
+    const next = new Array(full + 1).fill(null);
+    for(let mask = 1; mask <= full; mask++){
+      const low = mask & (-mask);
+      for(let sub = mask; sub > 0; sub = (sub - 1) & mask){
+        if(!(sub & low)) continue;
+        if(!isFinite(cost[sub])) continue;
+        const prev = dp[mask ^ sub];
+        if(!prev) continue;
+        const mk = Math.max(prev.mk, cost[sub]);
+        const tot = prev.tot + cost[sub];
+        const cur = next[mask];
+        if(!cur || mk < cur.mk - 0.001 || (Math.abs(mk - cur.mk) <= 0.001 && tot < cur.tot - 0.001))
+          next[mask] = {mk, tot, parts:prev.parts.concat([sub])};
+      }
+    }
+    dp = next;
+    const cand = dp[full];
+    if(cand && (!best || cand.mk < best.mk - 0.001 ||
+       (Math.abs(cand.mk - best.mk) <= 0.001 && cand.tot < best.tot - 0.001))) best = cand;
+  }
+  if(!best) return null;
+
+  const cars = [];
+  for(const mask of best.parts){
+    const trips = decompose(mask);
+    if(!trips) return null;
+    cars.push({trips});
+  }
+  cars.sort((a,b) => carTotal(originId, b, objective) - carTotal(originId, a, objective));
+  return cars;
+}
+
+/** 停車地点が多いとき：方面ごとにまとめてから、空いている車へ順に積む */
+function multiTripApprox(stops, K, cap, objective, originId){
+  const left = stops.slice();
+  const groups = [];
+  while(left.length){
+    // いちばん遠い地点を核にして、そこに近い地点を定員まで集める（方面がまとまる）
+    let si = 0, sd = -1;
+    left.forEach((s,i) => { const d = travelSec(originId, s.locId); if(d > sd){ sd = d; si = i; } });
+    const seed = left.splice(si, 1)[0];
+    const group = [seed];
+    let load = seed.staffIds.length;
+    while(left.length && load < cap){
+      let bi = -1, bd = Infinity;
+      left.forEach((s,i) => {
+        if(load + s.staffIds.length > cap) return;
+        const d = travelSec(seed.locId, s.locId);
+        if(d < bd){ bd = d; bi = i; }
+      });
+      if(bi < 0) break;
+      const picked = left.splice(bi, 1)[0];
+      group.push(picked); load += picked.staffIds.length;
+    }
+    const open = bestOrder(originId, group, "dropoff");
+    const ret  = bestOrder(originId, group, "return");
+    groups.push({openOrder:open.order, openCost:open.cost, retOrder:ret.order, retCost:ret.cost});
+  }
+
+  // 重い便から順に、いちばん空いている車へ（LPT法）
+  const cars = Array.from({length:Math.min(K, groups.length)}, () => ({trips:[], load:0, groups:[]}));
+  groups.sort((a,b) => b.retCost - a.retCost);
+  for(const g of groups){
+    const car = cars.reduce((a,b) => (a.load <= b.load ? a : b));
+    car.groups.push(g); car.load += g.retCost;
+  }
+  for(const car of cars){
+    if(objective === "return"){
+      car.trips = car.groups.map(g => ({stops:g.retOrder.slice()}));
+    }else{
+      // 帰り道がいちばん長い便を最後に回すと、その帰りぶんを丸ごと省ける
+      let bi = 0, bs = -Infinity;
+      car.groups.forEach((g,i) => { const save = g.retCost - g.openCost; if(save > bs){ bs = save; bi = i; } });
+      car.trips = car.groups.map((g,i) => ({stops:(i === bi ? g.openOrder : g.retOrder).slice()}));
+      car.trips.push(car.trips.splice(bi, 1)[0]);
+    }
+    delete car.groups; delete car.load;
+  }
+  const used = cars.filter(c => c.trips.length);
+  used.sort((a,b) => carTotal(originId, b, objective) - carTotal(originId, a, objective));
+  return used;
+}
+
+/** 1台が走り終わるまでの時間。最終便だけ帰りを数えない（設定が「帰着」なら全便数える） */
+function carTotal(originId, car, objective){
+  const obj = objective || db.settings.objective;
+  return car.trips.reduce((sum, t, i) => {
+    const e = evalRoute(originId, t.stops);
+    const last = i === car.trips.length - 1;
+    return sum + (last && obj !== "return" ? e.dropoffSec : e.returnSec);
+  }, 0);
+}
+
+/** 車ごとの所要時間と、全体（いちばん遅い車）の時間 */
+function planTimes(plan){
+  const per = plan.cars.map(c => carTotal(plan.originId, c));
+  return {per, total: per.length ? Math.max(...per) : 0};
+}
+
+/* ==========================================================================
+   画面
+   ========================================================================== */
+const CAR_COLORS = ["var(--car1)","var(--car2)","var(--car3)"];
+
+/** 名簿が入れ替わったとき、消えたスタッフ・場所を今日の選択から取り除く */
+function pruneSession(){
+  for(const id of [...session.selected])
+    if(!staffById(id)){ session.selected.delete(id); delete session.choice[id]; }
+  for(const k of Object.keys(session.choice))
+    if(!locById(session.choice[k])) delete session.choice[k];
+  if(session.plan) session.plan = null;
+}
+
+function renderAll(){
+  renderConditions();
+  renderStaffPicker();
+  renderAssign();
+  renderMasterStaff();
+  renderMasterLocs();
+  renderSettings();
+  renderBar();
+}
+
+/* ---- ステップ1 ---------------------------------------------------------- */
+function renderConditions(){
+  const sel = $("#originSel");
+  sel.innerHTML = db.locs.map(l => `<option value="${esc(l.id)}">${esc(l.name)}</option>`).join("");
+  if(!locById(db.settings.originId) && db.locs.length) db.settings.originId = db.locs[0].id;
+  sel.value = db.settings.originId;
+  $$("#carSeg button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.n === db.settings.cars)));
+  $("#capLabel").textContent = db.settings.capacity;
+}
+
+/* ---- ステップ2：出勤者 --------------------------------------------------- */
+function renderStaffPicker(){
+  const q = $("#staffSearch").value.trim().toLowerCase();
+  const list = db.staff.filter(s => !q || s.name.toLowerCase().includes(q));
+  $("#staffEmpty").classList.toggle("hidden", db.staff.length > 0);
+  $("#staffGrid").innerHTML = list.map(s => {
+    const on = session.selected.has(s.id);
+    const where = s.locIds.length ? s.locIds.map(locName).join(" / ") : "候補なし";
+    return `<label class="pick" data-on="${on?1:0}">
+      <input type="checkbox" data-staff="${esc(s.id)}" ${on?"checked":""}>
+      <span style="min-width:0">
+        <span class="nm">${esc(s.name)}</span><br>
+        <span class="sub">${esc(where)}</span>
+      </span></label>`;
+  }).join("");
+  const n = session.selected.size;
+  $("#staffCount").textContent = n ? `${n}人を選択中` : "";
+}
+
+/* ---- ステップ3：送迎場所 ------------------------------------------------- */
+function renderAssign(){
+  const ids = db.staff.filter(s => session.selected.has(s.id)).map(s => s.id);
+  $("#secAssign").classList.toggle("hidden", ids.length === 0);
+  $("#assignList").innerHTML = ids.map(id => {
+    const s = staffById(id);
+    const chosen = session.choice[id] ?? null;
+    const isOther = chosen !== null && !s.locIds.includes(chosen);
+    const chips = s.locIds.map(l =>
+      `<button type="button" class="opt" data-choose="${esc(id)}" data-loc="${esc(l)}"
+        aria-pressed="${String(chosen === l)}">${esc(locName(l))}</button>`).join("");
+    const otherLabel = isOther ? `その他：${locName(chosen)}` : "その他…";
+    return `<div class="assign">
+      <div class="who"><span>${esc(s.name)}</span></div>
+      <div class="opts">${chips}
+        <button type="button" class="opt other" data-other="${esc(id)}"
+          aria-pressed="${String(isOther)}">${esc(otherLabel)}</button>
+      </div>
+      ${chosen === null ? '<div class="hint" style="color:var(--warn)">送迎場所が未選択です</div>' : ""}
+    </div>`;
+  }).join("");
+}
+
+/* ---- 下部バー ------------------------------------------------------------ */
+function renderBar(){
+  const n = session.selected.size;
+  const ready = n > 0 && [...session.selected].every(id => session.choice[id]);
+  $("#bar").classList.toggle("hidden", n === 0 || $("#tab-plan").classList.contains("hidden"));
+  $("#barCnt").textContent = `${n}人 / ${db.settings.cars}台`;
+  const btn = $("#buildBtn");
+  btn.disabled = !ready;
+  btn.textContent = ready ? "順路を作成" : "送迎場所を選んでください";
+}
+
+/* ---- ステップ4：順路 ----------------------------------------------------- */
+function renderResult(){
+  const box = $("#resultBox");
+  $("#secResult").classList.toggle("hidden", !session.plan);
+  if(!session.plan) return;
+
+  const plan = session.plan;
+  const originId = plan.originId, oName = locName(originId);
+  const cap = db.settings.capacity;
+  const backToOrigin = db.settings.objective === "return";
+  const {per, total} = planTimes(plan);
+  const multi = plan.cars.some(c => c.trips.length > 1);
+  let anyEstimate = false;
+
+  const slotOptions = current => plan.cars.flatMap((c, ci) =>
+    c.trips.map((_, ti) => {
+      const v = ci + "-" + ti;
+      return `<option value="${v}" ${v === current ? "selected" : ""}>車${ci+1}${c.trips.length > 1 ? ` ${ti+1}便` : ""}</option>`;
+    })).join("");
+  const slots = plan.cars.reduce((a,c) => a + c.trips.length, 0);
+
+  let html = "";
+  plan.cars.forEach((car, ci) => {
+    const people = car.trips.reduce((a,t) => a + t.stops.reduce((x,s) => x + s.staffIds.length, 0), 0);
+    if(!people) return;
+    const single = car.trips.length === 1;
+    const solo = single ? evalRoute(originId, car.trips[0].stops) : null;
+    html += `<div class="carcard">
+      <div class="carhead" style="background:${CAR_COLORS[ci % 3]}">
+        <b>車${ci+1}<span style="font-weight:400;font-size:13px"> ・ ${people}人${single ? "" : ` ・ ${car.trips.length}便`}</span></b>
+        <span class="tm">${single
+          ? `降車完了 ${fmtMin(solo.dropoffSec)}　/　${esc(oName)}へ戻ると ${fmtMin(solo.returnSec)}`
+          : `合計 ${fmtMin(per[ci])}`}</span>
+      </div>`;
+
+    car.trips.forEach((trip, ti) => {
+      const ev = evalRoute(originId, trip.stops);
+      if(ev.legs.some(l => !l.measured)) anyEstimate = true;
+      const last = ti === car.trips.length - 1;
+      const load = trip.stops.reduce((a,s) => a + s.staffIds.length, 0);
+
+      if(car.trips.length > 1){
+        html += `<div class="tripbar">
+          <span class="tag">${ti+1}便</span><span>${load}人</span>
+          <span class="tm">${last && !backToOrigin ? "降車完了 " + fmtMin(ev.dropoffSec) : oName + "へ戻るまで " + fmtMin(ev.returnSec)}</span>
+        </div>`;
+      }
+      html += `<div class="leg origin"><span class="idx">出</span><div class="bd"><div class="pl">${esc(oName)}</div>
+        <div class="pp">${load}人を乗せて出発</div></div></div>`;
+      trip.stops.forEach((st, si) => {
+        const leg = ev.legs[si];
+        html += `<div class="dur">↓ ${fmtMin(leg.driveSec)}${leg.measured ? "" : "（推定）"}</div>
+        <div class="leg">
+          <span class="idx">${si+1}</span>
+          <div class="bd">
+            <div class="pl">${esc(locName(st.locId))}</div>
+            <div class="pp">${st.staffIds.map(id =>
+              `${esc(staffById(id)?.name ?? "?")} <button class="btn sm" data-drop="${esc(id)}" title="この人を外す" style="padding:0 6px;line-height:1.4">×</button>`
+            ).join(" ・ ")}</div>
+          </div>
+          <div class="mv">
+            <button class="btn sm" data-mv="up" data-slot="${ci}-${ti}" data-stop="${si}" ${si === 0 ? "disabled" : ""}>↑</button>
+            <button class="btn sm" data-mv="down" data-slot="${ci}-${ti}" data-stop="${si}" ${si === trip.stops.length-1 ? "disabled" : ""}>↓</button>
+            ${slots > 1 ? `<select data-move-slot="${ci}-${ti}" data-stop="${si}" style="width:auto;padding:4px 6px;font-size:12px">
+              ${slotOptions(ci + "-" + ti)}
+            </select>` : ""}
+          </div>
+        </div>`;
+      });
+      if(!last || backToOrigin)
+        html += `<div class="dur">↓ ${fmtMin(ev.backSec)}</div>
+          <div class="leg origin"><span class="idx">↩</span><div class="bd"><div class="pl">${esc(oName)}</div>
+          <div class="pp">${last ? "到着" : "次の人を乗せる"}</div></div></div>`;
+      html += `<div class="triplinks">
+        <a class="btn sm" href="${esc(gmapUrl(ci, ti) || "#")}" target="_blank" rel="noopener">${car.trips.length > 1 ? `${ti+1}便を` : ""}Googleマップで開く</a>
+      </div>`;
+    });
+
+    html += `<div style="display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);flex-wrap:wrap">
+      <button class="btn sm" data-copy="${ci}">この車の予定をコピー</button>
+    </div></div>`;
+  });
+
+  const usedCars = plan.cars.filter(c => c.trips.some(t => t.stops.length)).length;
+  const trips = plan.cars.reduce((a,c) => a + c.trips.length, 0);
+  html += `<div class="okbox"><b>全体：${fmtMin(total)}</b>
+    <span style="color:var(--sub)">（${usedCars}台${multi ? `・全${trips}便` : ""}。車どうしは待たないので、いちばん遅く終わる車の時間です）</span></div>`;
+  if(multi) html += `<div class="note">1台で運びきれないため、出発地点に戻って積み直す形にしています。台数を増やすと便が減ります。</div>`;
+  if(anyEstimate) html += `<div class="note">「推定」の区間は直線距離からの概算です。</div>`;
+  html += `<div class="row" style="margin-top:12px">
+    <button class="btn primary" id="reoptimize">自動で組み直す</button>
+    <button class="btn" id="copyAll">全部まとめてコピー</button>
+  </div>`;
+  box.innerHTML = html;
+}
+
+const carAt = (plan, slot) => {
+  const [ci, ti] = String(slot).split("-").map(Number);
+  return plan.cars[ci] && plan.cars[ci].trips[ti] ? plan.cars[ci].trips[ti] : null;
+};
+
+function planToText(ci){
+  const plan = session.plan, originId = plan.originId, oName = locName(originId);
+  const car = plan.cars[ci];
+  const backToOrigin = db.settings.objective === "return";
+  const people = car.trips.reduce((a,t) => a + t.stops.reduce((x,s) => x + s.staffIds.length, 0), 0);
+  let out = `【車${ci+1}】${people}人`;
+  if(car.trips.length > 1) out += ` / ${car.trips.length}便`;
+  out += `\n`;
+  car.trips.forEach((trip, ti) => {
+    const ev = evalRoute(originId, trip.stops);
+    const last = ti === car.trips.length - 1;
+    if(car.trips.length > 1) out += `\n［${ti+1}便］\n`;
+    out += `${oName} 発\n`;
+    trip.stops.forEach((st, si) => {
+      out += `  ↓ ${fmtMin(ev.legs[si].driveSec)}\n`;
+      out += `${locName(st.locId)}　${st.staffIds.map(id => staffById(id)?.name ?? "?").join("・")}\n`;
+    });
+    if(!last || backToOrigin) out += `  ↓ ${fmtMin(ev.backSec)}\n${oName} 着\n`;
+  });
+  if(car.trips.length === 1){
+    const e = evalRoute(originId, car.trips[0].stops);
+    out += `\n降車完了まで ${fmtMin(e.dropoffSec)} / ${oName}へ戻ると ${fmtMin(e.returnSec)}`;
+  }else{
+    out += `\nこの車の合計 ${fmtMin(planTimes(plan).per[ci])}（${car.trips.length}便）`;
+  }
+  return out;
+}
+function allPlanText(){
+  const plan = session.plan;
+  const parts = plan.cars.map((c, ci) => c.trips.some(t => t.stops.length) ? planToText(ci) : null).filter(Boolean);
+  if(plan.cars.length > 1) parts.push(`全体 ${fmtMin(planTimes(plan).total)}（いちばん遅く終わる車）`);
+  return parts.join("\n\n");
+}
+function gmapUrl(ci, ti){
+  const plan = session.plan, originId = plan.originId;
+  const pt = id => { const l = locById(id); return l ? `${l.lat},${l.lng}` : ""; };
+  const trip = plan.cars[ci] && plan.cars[ci].trips[ti];
+  if(!trip || !trip.stops.length) return null;
+  const stops = trip.stops.map(s => pt(s.locId)).filter(Boolean);
+  const backToOrigin = db.settings.objective === "return" || ti < plan.cars[ci].trips.length - 1;
+  const dest = backToOrigin ? pt(originId) : stops[stops.length - 1];
+  const way = backToOrigin ? stops : stops.slice(0, -1);
+  let u = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(pt(originId))}&destination=${encodeURIComponent(dest)}&travelmode=driving`;
+  if(way.length) u += `&waypoints=${encodeURIComponent(way.join("|"))}`;
+  return u;
+}
+async function copyText(text){
+  try{ await navigator.clipboard.writeText(text); toast("コピーしました"); }
+  catch(e){
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.style.position="fixed"; ta.style.opacity="0";
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); toast("コピーしました"); }
+    catch(_){ showCopyFallback(text); }
+    ta.remove();
+  }
+}
+/** クリップボードが使えない環境向け：選んでコピーできる形で見せる */
+function showCopyFallback(text){
+  openDialog("順路をコピー",
+    `<p class="hint" style="margin-top:0">下のテキストを選んでコピーしてください。</p>
+     <textarea id="cpArea" readonly style="min-height:200px;font-size:13px">${esc(text)}</textarea>`,
+    null, "");
+  const ta = $("#cpArea");
+  ta.focus(); ta.select();
+}
+
+let toastTimer = null;
+function toast(msg){
+  let el = $("#toast");
+  if(!el){
+    el = document.createElement("div"); el.id = "toast";
+    el.style.cssText = "position:fixed;left:50%;transform:translateX(-50%);bottom:78px;z-index:99;"+
+      "background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:13px;font-weight:600";
+    document.body.appendChild(el);
+  }
+  el.textContent = msg; el.style.display = "block";
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.style.display = "none"; }, 1600);
+}
+
+/* ---- マスタ画面 ---------------------------------------------------------- */
+function renderMasterStaff(){
+  const tb = $("#staffTable");
+  $("#staffTableEmpty").classList.toggle("hidden", db.staff.length > 0);
+  tb.innerHTML = db.staff.map(s => `<tr>
+    <td><b>${esc(s.name)}</b></td>
+    <td>${s.locIds.length ? esc(s.locIds.map(locName).join(" / ")) : '<span style="color:var(--sub)">未設定</span>'}</td>
+    <td class="act">
+      <button class="btn sm" data-edit-staff="${esc(s.id)}">編集</button>
+      <button class="btn sm danger" data-del-staff="${esc(s.id)}">削除</button>
+    </td></tr>`).join("");
+}
+function renderMasterLocs(){
+  const q = $("#locSearch").value.trim().toLowerCase();
+  const list = db.locs.filter(l => !q || l.name.toLowerCase().includes(q));
+  $("#locTable").innerHTML = list.map(l => {
+    const isOrigin = l.id === db.settings.originId;
+    return `<tr>
+      <td><b>${esc(l.name)}</b>${isOrigin ? '<span class="badge on">出発地点</span>' : ""}</td>
+      <td style="font-size:12px;color:var(--sub)">${l.address ? esc(l.address) : `<span style="font-variant-numeric:tabular-nums">${l.lat.toFixed(4)}, ${l.lng.toFixed(4)}</span>`}</td>
+      <td class="act">
+        <button class="btn sm" data-edit-loc="${esc(l.id)}">編集</button>
+        <button class="btn sm danger" data-del-loc="${esc(l.id)}">削除</button>
+      </td></tr>`;
+  }).join("");
+}
+
+/* ---- 設定画面 ------------------------------------------------------------ */
+function renderSettings(){
+  const s = db.settings;
+  $("#objSel").value = s.objective;
+  $("#capInput").value = s.capacity;
+  $("#stopInput").value = s.stopMin;
+  $("#speedCityInput").value = s.speedCity;
+  $("#speedFarInput").value = s.speedFar;
+  $("#detourInput").value = s.detour;
+  $("#apiKey").value = s.apiKey || "";
+  const count = Object.keys(db.matrix).length;
+  const badge = $("#apiBadge");
+  badge.textContent = count ? `実測 ${count} 区間` : (s.apiKey ? "キー設定済み" : "未設定");
+  badge.className = "badge" + (count ? " on" : "");
+
+  $("#matrixStatus").textContent = count
+    ? `${count}区間の実測所要時間を保存済み${db.matrixAt ? "（最終取得 " + db.matrixAt + "）" : ""}。`
+    : (s.apiKey
+       ? "まだ実測値はありません。次に順路を作るときに自動で取得します。"
+       : "キー未設定のため、直線距離からの概算で計算しています。");
+}
+
+/* ---- ダイアログ ---------------------------------------------------------- */
+let dlgOk = null, dlgCancel = null;
+function openDialog(title, bodyHTML, onOk, okLabel, onCancel){
+  $("#dlgTitle").textContent = title;
+  $("#dlgBody").innerHTML = bodyHTML;
+  $("#dlgOk").textContent = okLabel || "保存";
+  $("#dlgOk").classList.toggle("hidden", onOk === null);
+  dlgOk = onOk;
+  dlgCancel = onCancel || null;
+  $("#dlg").showModal();
+}
+$("#dlg").addEventListener("close", () => {
+  const val = $("#dlg").returnValue;
+  const ok = dlgOk, cancel = dlgCancel;
+  if(val === "ok" && ok){
+    // 入力エラーなら開き直す。このときはまだ確定でも取り消しでもない
+    if(ok() === false){ $("#dlg").showModal(); return; }
+  }else if(val !== "ok" && cancel){
+    cancel();
+  }
+  dlgOk = null; dlgCancel = null;
+});
+
+function locOptions(selected){
+  return db.locs.map(l => `<option value="${esc(l.id)}" ${l.id===selected?"selected":""}>${esc(l.name)}</option>`).join("");
+}
+function editStaff(id){
+  const s = id ? staffById(id) : {name:"", locIds:[]};
+  if(!s) return;
+  openDialog(id ? "スタッフを編集" : "スタッフを追加", `
+    <label class="fld"><span>名前</span><input type="text" id="fName" value="${esc(s.name)}" placeholder="例）山田 太郎"></label>
+    <label class="fld"><span>送迎場所の第1候補</span><select id="fLoc1"><option value="">（未設定）</option>${locOptions(s.locIds[0])}</select></label>
+    <label class="fld"><span>送迎場所の第2候補（任意）</span><select id="fLoc2"><option value="">（なし）</option>${locOptions(s.locIds[1])}</select></label>
+    <p class="hint">ここに無い場所を当日指定されたときは、順路作成の画面で「その他」から選べます。</p>`,
+    () => {
+      const name = $("#fName").value.trim();
+      if(!name){ alert("名前を入力してください"); return false; }
+      const l1 = $("#fLoc1").value, l2 = $("#fLoc2").value;
+      const locIds = [l1, l2].filter((v,i,a) => v && a.indexOf(v) === i);
+      if(id){ const t = staffById(id); t.name = name; t.locIds = locIds; }
+      else db.staff.push({id:uid("stf"), name, locIds});
+      save(); renderAll(); renderResult();
+    });
+}
+/**
+ * 住所から緯度経度を調べる。OpenStreetMap の Nominatim（無料・キー不要）を使う。
+ * 日本国内に絞って検索する。見つからなければ null。
+ */
+async function geocodeAddress(query){
+  const url = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=jp"
+    + "&accept-language=ja&q=" + encodeURIComponent(query);
+  const res = await fetch(url, {headers:{"Accept":"application/json"}});
+  if(!res.ok) throw new Error(`HTTP ${res.status}`);
+  const rows = await res.json();
+  if(!rows.length) return null;
+  const r = rows[0];
+  const lat = parseFloat(r.lat), lng = parseFloat(r.lon);
+  if(!isFinite(lat) || !isFinite(lng)) return null;
+  return {lat, lng, address: r.display_name};
+}
+
+function editLoc(id, afterCreate){
+  const l = id ? locById(id) : {name:"", lat:"", lng:"", address:""};
+  if(!l) return;
+  const coord = (l.lat === "" ? "" : `${l.lat}, ${l.lng}`);
+  let found = null;   // 検索で見つかった{lat,lng,address}。保存時はこれを優先する
+
+  openDialog(id ? "場所を編集" : "場所を追加", `
+    <label class="fld"><span>場所の名前</span><input type="text" id="fLName" value="${esc(l.name)}" placeholder="例）中野坂上駅"></label>
+    <label class="fld"><span>住所で探す</span>
+      <div class="row" style="gap:6px">
+        <input type="text" id="fAddr" value="${esc(l.address || "")}" style="flex:1"
+          placeholder="例）東京都新宿区西新宿2-8-1 または 中野坂上駅">
+        <button type="button" class="btn" id="fAddrGo" style="flex:0 0 auto">検索</button>
+      </div>
+    </label>
+    <div id="fAddrResult" class="hint" style="margin:-6px 0 12px"></div>
+    <details id="fManualDetails">
+      <summary style="cursor:pointer;font-size:12.5px;color:var(--sub)">
+        座標を直接入力する（Googleマップで右クリック→「座標をコピー」）</summary>
+      <label class="fld" style="margin-top:10px"><span>座標（緯度, 経度）</span>
+        <input type="text" id="fCoord" value="${esc(coord)}" placeholder="35.6976, 139.6836" inputmode="decimal"></label>
+    </details>`,
+    () => {
+      const name = $("#fLName").value.trim();
+      if(!name){ alert("場所の名前を入力してください"); return false; }
+
+      let lat, lng, address = found ? found.address : (l.address || "");
+      if(found){
+        lat = found.lat; lng = found.lng;
+      }else{
+        const m = $("#fCoord").value.trim().match(/^\s*(-?\d+(?:\.\d+)?)\s*[,\s]\s*(-?\d+(?:\.\d+)?)\s*$/);
+        if(!m){ alert("住所で検索するか、座標を「35.6976, 139.6836」の形式で入力してください"); return false; }
+        lat = parseFloat(m[1]); lng = parseFloat(m[2]);
+        if(Math.abs(lat) > 90 || Math.abs(lng) > 180){ alert("座標の範囲が不正です"); return false; }
+      }
+
+      if(id){ const t = locById(id); t.name = name; t.lat = lat; t.lng = lng; t.address = address; }
+      else {
+        const created = {id:uid("loc"), name, lat, lng, address};
+        db.locs.push(created);
+        if(afterCreate) afterCreate(created);
+      }
+      save(); renderAll(); renderResult();
+    });
+
+  const go = async () => {
+    const q = $("#fAddr").value.trim();
+    const box = $("#fAddrResult"), btn = $("#fAddrGo");
+    if(!q){ box.textContent = ""; found = null; return; }
+    btn.disabled = true; box.style.color = "var(--sub)"; box.textContent = "検索中…";
+    try{
+      const r = await geocodeAddress(q);
+      if(!r){
+        found = null;
+        box.style.color = "var(--danger)";
+        box.textContent = "見つかりませんでした。もう少し詳しく入力するか、下の「座標を直接入力する」をお使いください。";
+      }else{
+        found = r;
+        box.style.color = "var(--ok)";
+        box.textContent = "→ " + r.address;
+        const details = $("#fManualDetails");
+        if(details) details.open = false;
+      }
+    }catch(e){
+      found = null;
+      box.style.color = "var(--danger)";
+      box.textContent = "検索できませんでした（通信エラー）。下の「座標を直接入力する」をお使いください。";
+    }finally{
+      btn.disabled = false;
+    }
+  };
+  $("#fAddrGo").addEventListener("click", go);
+  $("#fAddr").addEventListener("keydown", e => {
+    if(e.key === "Enter"){ e.preventDefault(); go(); }
+  });
+}
+
+/** 「その他」の場所を選ぶ */
+function pickOther(staffId){
+  const render = (q="") => {
+    const list = db.locs.filter(l => !q || l.name.toLowerCase().includes(q.toLowerCase()));
+    return list.length
+      ? list.map(l => `<button type="button" class="btn wide" data-pick-loc="${esc(l.id)}"
+          style="text-align:left;margin-bottom:6px">${esc(l.name)}</button>`).join("")
+      : '<p class="empty">該当なし。下のボタンから登録できます。</p>';
+  };
+  openDialog(`${staffById(staffId)?.name ?? ""} の送迎場所`, `
+    <input type="search" id="pkSearch" placeholder="場所名で検索" autocomplete="off">
+    <div id="pkList" style="max-height:46vh;overflow:auto;margin:10px 0">${render()}</div>
+    <button type="button" class="btn wide" id="pkNew">＋ 新しい場所を登録する</button>`, null, "");
+  $("#pkSearch").addEventListener("input", e => { $("#pkList").innerHTML = render(e.target.value); });
+  $("#pkList").addEventListener("click", e => {
+    const b = e.target.closest("[data-pick-loc]");
+    if(!b) return;
+    session.choice[staffId] = b.dataset.pickLoc;
+    dlgOk = null; $("#dlg").close();
+    renderAssign(); renderBar();
+  });
+  $("#pkNew").addEventListener("click", () => {
+    dlgOk = null; $("#dlg").close();
+    setTimeout(() => editLoc(null, created => {
+      session.choice[staffId] = created.id;
+    }), 60);
+  });
+}
+
+/* ==========================================================================
+   Google Routes API から実測所要時間を取得（一度だけ。以後はキャッシュを使う）
+   ========================================================================== */
+const MAX_ELEMENTS = 600;   // Routes API の 1リクエスト上限(625)に余裕を持たせる
+
+/** 指定した地点どうしの実測所要時間を Google から取ってくる */
+async function fetchPairsFor(locs, key, onProgress){
+  const perChunk = Math.max(1, Math.floor(MAX_ELEMENTS / locs.length));
+  const out = {};
+  let done = 0;
+  const total = locs.length * (locs.length - 1);
+  for(let i = 0; i < locs.length; i += perChunk){
+    const origins = locs.slice(i, i + perChunk);
+    if(onProgress) onProgress(done, total);
+    const body = {
+      origins: origins.map(l => ({waypoint:{location:{latLng:{latitude:l.lat, longitude:l.lng}}}})),
+      destinations: locs.map(l => ({waypoint:{location:{latLng:{latitude:l.lat, longitude:l.lng}}}})),
+      travelMode: "DRIVE",
+      routingPreference: "TRAFFIC_UNAWARE",   // いちばん安いモード
+    };
+    const res = await fetch("https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix", {
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "X-Goog-Api-Key": key,
+        "X-Goog-FieldMask":"originIndex,destinationIndex,duration,condition",
+      },
+      body: JSON.stringify(body),
+    });
+    if(!res.ok){
+      let detail = "";
+      try{ detail = (await res.json())?.error?.message || ""; }catch(_){}
+      throw new Error(`HTTP ${res.status}${detail ? "：" + detail : ""}`);
+    }
+    for(const r of await res.json()){
+      if(r.condition && r.condition !== "ROUTE_EXISTS") continue;
+      if(typeof r.duration !== "string") continue;
+      const sec = parseFloat(r.duration.replace("s",""));
+      if(!isFinite(sec)) continue;
+      const a = origins[r.originIndex ?? 0], b = locs[r.destinationIndex ?? 0];
+      if(!a || !b || a.id === b.id) continue;
+      out[mKey(a.id, b.id)] = sec;
+      done++;
+    }
+  }
+  return out;
+}
+
+/**
+ * これから使う地点の実測所要時間が揃っているか確かめ、足りなければ取りに行く。
+ * 担当者はキーの存在を意識しなくていい（管理画面で一度入れれば共有で全員に届く）。
+ */
+async function ensureMeasured(locIds){
+  const key = db.settings.apiKey;
+  if(!key) return {ok:true, skipped:true};
+  const ids = [...new Set(locIds)].filter(id => locById(id));
+  if(ids.length < 2) return {ok:true};
+  let missing = 0;
+  for(const a of ids) for(const b of ids) if(a !== b && !isMeasured(a, b)) missing++;
+  if(!missing) return {ok:true};
+  try{
+    const got = await fetchPairsFor(ids.map(locById), key);
+    Object.assign(db.matrix, got);
+    db.matrixAt = new Date().toISOString().slice(0,10);
+    save();
+    return {ok:true, fetched:Object.keys(got).length};
+  }catch(err){
+    console.warn("実測所要時間を取得できませんでした", err);
+    return {ok:false, message:err.message};
+  }
+}
+
+/** 管理画面から、登録済みの全地点ぶんを取り直す */
+async function fetchMatrix(){
+  const key = $("#apiKey").value.trim();
+  if(!key){ alert("APIキーを入力してください"); return; }
+  const locs = db.locs;
+  if(locs.length < 2){ alert("場所が2つ以上必要です"); return; }
+  const total = locs.length * (locs.length - 1);
+  if(!confirm(`${locs.length}か所すべての組み合わせ（${total}区間）を取り直します。\n`
+    + `Googleの課金対象は約${total}要素です。よろしいですか？`)) return;
+
+  db.settings.apiKey = key;
+  const btn = $("#fetchMatrix"), status = $("#matrixStatus");
+  btn.disabled = true;
+  try{
+    const fresh = await fetchPairsFor(locs, key, (d,t) => { status.textContent = `取得中… ${d} / ${t} 区間`; });
+    db.matrix = fresh;
+    db.matrixAt = new Date().toISOString().slice(0,10);
+    save(); renderSettings(); renderResult();
+    status.textContent = `完了：${Object.keys(fresh).length}区間を保存しました。共有中なら、ほかの担当者にも自動で届きます。`;
+  }catch(err){
+    console.error(err);
+    status.innerHTML = `<span style="color:var(--danger)">取得に失敗しました：${esc(err.message)}</span><br>` +
+      `キーの「Routes API」有効化、ウェブサイトの制限、請求先アカウントの設定をご確認ください。`;
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+/* ==========================================================================
+   イベント
+   ========================================================================== */
+function switchTab(name){
+  $$('nav button').forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
+  ["plan","master","pw"].forEach(t => $("#tab-" + t).classList.toggle("hidden", t !== name));
+  window.scrollTo(0,0);
+  renderBar();
+}
+$$('nav button').forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
+
+/* ステップ1 */
+$("#originSel").addEventListener("change", e => {
+  db.settings.originId = e.target.value; save();
+  if(session.plan){ session.plan.originId = e.target.value; renderResult(); }
+  renderMasterLocs();
+});
+$("#carSeg").addEventListener("click", e => {
+  const b = e.target.closest("button[data-n]"); if(!b) return;
+  db.settings.cars = +b.dataset.n; save(); renderConditions(); renderBar();
+});
+
+/* ステップ2 */
+$("#staffSearch").addEventListener("input", renderStaffPicker);
+$("#staffGrid").addEventListener("change", e => {
+  const cb = e.target.closest("input[data-staff]"); if(!cb) return;
+  const id = cb.dataset.staff;
+  if(cb.checked){
+    session.selected.add(id);
+    const s = staffById(id);
+    if(!session.choice[id] && s?.locIds.length) session.choice[id] = s.locIds[0];
+  }else{
+    session.selected.delete(id);
+    delete session.choice[id];
+  }
+  session.plan = null;
+  renderStaffPicker(); renderAssign(); renderResult(); renderBar();
+});
+$("#clearStaff").addEventListener("click", () => {
+  session.selected.clear();
+  for(const k in session.choice) delete session.choice[k];
+  session.plan = null;
+  renderStaffPicker(); renderAssign(); renderResult(); renderBar();
+});
+
+/* ステップ3 */
+$("#assignList").addEventListener("click", e => {
+  const chip = e.target.closest("[data-choose]");
+  if(chip){
+    session.choice[chip.dataset.choose] = chip.dataset.loc;
+    session.plan = null;
+    renderAssign(); renderResult(); renderBar(); return;
+  }
+  const other = e.target.closest("[data-other]");
+  if(other) pickOther(other.dataset.other);
+});
+
+/* 順路作成 */
+async function buildPlan(){
+  const assignments = [...session.selected]
+    .filter(id => session.choice[id] && locById(session.choice[id]))
+    .map(id => ({staffId:id, locId:session.choice[id]}));
+  await ensureMeasured([db.settings.originId, ...assignments.map(a => a.locId)]);
+  const r = planRoutes(assignments);
+  if(!r.ok){ alert(r.message); return false; }
+  session.plan = {originId: db.settings.originId, cars: r.cars};
+  renderResult();
+  return true;
+}
+$("#buildBtn").addEventListener("click", async () => {
+  const btn = $("#buildBtn"), label = btn.textContent;
+  btn.disabled = true;
+  if(db.settings.apiKey) btn.textContent = "所要時間を確認中…";
+  try{
+    if(await buildPlan()) $("#secResult").scrollIntoView({behavior:"smooth", block:"start"});
+  }finally{
+    btn.disabled = false; btn.textContent = label;
+    renderBar();
+  }
+});
+
+/* ステップ4：順路の手直し */
+$("#resultBox").addEventListener("click", e => {
+  if(!session.plan) return;
+  const plan = session.plan;
+
+  const mv = e.target.closest("[data-mv]");
+  if(mv){
+    const car = carAt(plan, mv.dataset.slot);
+    if(!car) return;
+    const i = +mv.dataset.stop, j = mv.dataset.mv === "up" ? i - 1 : i + 1;
+    if(j < 0 || j >= car.stops.length) return;
+    [car.stops[i], car.stops[j]] = [car.stops[j], car.stops[i]];
+    renderResult(); return;
+  }
+
+  const drop = e.target.closest("[data-drop]");
+  if(drop){
+    const sid = drop.dataset.drop;
+    if(!confirm(`${staffById(sid)?.name ?? "この人"} を今日の送迎から外しますか？`)) return;
+    for(const car of plan.cars){
+      for(const trip of car.trips){
+        for(const st of trip.stops) st.staffIds = st.staffIds.filter(x => x !== sid);
+        trip.stops = trip.stops.filter(st => st.staffIds.length);
+      }
+      car.trips = car.trips.filter(t => t.stops.length);
+    }
+    plan.cars = plan.cars.filter(c => c.trips.length);
+    session.selected.delete(sid);
+    delete session.choice[sid];
+    if(!plan.cars.length) session.plan = null;
+    renderStaffPicker(); renderAssign(); renderResult(); renderBar();
+    return;
+  }
+
+  const cp = e.target.closest("[data-copy]");
+  if(cp){ copyText(planToText(+cp.dataset.copy)); return; }
+  if(e.target.id === "copyAll"){ copyText(allPlanText()); return; }
+
+  if(e.target.id === "reoptimize"){
+    // 画面に残っている人だけで組み直す
+    const assignments = [];
+    for(const car of plan.cars)
+      for(const trip of car.trips)
+        for(const st of trip.stops)
+          for(const sid of st.staffIds) assignments.push({staffId:sid, locId:st.locId});
+    const r = planRoutes(assignments);
+    if(!r.ok){ alert(r.message); return; }
+    plan.cars = r.cars;
+    renderResult();
+  }
+});
+
+$("#resultBox").addEventListener("change", e => {
+  const sel = e.target.closest("[data-move-slot]");
+  if(!sel || !session.plan) return;
+  const from = carAt(session.plan, sel.dataset.moveSlot);
+  const to = carAt(session.plan, sel.value);
+  if(!from || !to || from === to) return;
+  const stop = from.stops.splice(+sel.dataset.stop, 1)[0];
+  const same = to.stops.find(x => x.locId === stop.locId);
+  if(same) same.staffIds.push(...stop.staffIds);
+  else to.stops.push(stop);
+  renderResult();
+});
+
+/* マスタ */
+$("#addStaff").addEventListener("click", () => editStaff(null));
+$("#staffTable").addEventListener("click", e => {
+  const ed = e.target.closest("[data-edit-staff]");
+  if(ed) return editStaff(ed.dataset.editStaff);
+  const del = e.target.closest("[data-del-staff]");
+  if(del){
+    const s = staffById(del.dataset.delStaff);
+    if(!s || !confirm(`${s.name} を削除しますか？`)) return;
+    db.staff = db.staff.filter(x => x.id !== s.id);
+    session.selected.delete(s.id); delete session.choice[s.id];
+    session.plan = null;
+    save(); renderAll(); renderResult();
+  }
+});
+$("#locSearch").addEventListener("input", renderMasterLocs);
+$("#addLoc").addEventListener("click", () => editLoc(null));
+$("#locTable").addEventListener("click", e => {
+  const ed = e.target.closest("[data-edit-loc]");
+  if(ed) return editLoc(ed.dataset.editLoc);
+  const del = e.target.closest("[data-del-loc]");
+  if(del){
+    const l = locById(del.dataset.delLoc);
+    if(!l) return;
+    if(l.id === db.settings.originId){ alert("出発地点に設定中の場所は削除できません。先に出発地点を変更してください。"); return; }
+    const users = db.staff.filter(s => s.locIds.includes(l.id));
+    const msg = users.length
+      ? `${l.name} を削除しますか？\n${users.map(s=>s.name).join("、")} の候補からも外れます。`
+      : `${l.name} を削除しますか？`;
+    if(!confirm(msg)) return;
+    db.locs = db.locs.filter(x => x.id !== l.id);
+    db.staff.forEach(s => { s.locIds = s.locIds.filter(x => x !== l.id); });
+    for(const k in session.choice) if(session.choice[k] === l.id) delete session.choice[k];
+    for(const k of Object.keys(db.matrix)) if(k.includes(l.id)) delete db.matrix[k];
+    session.plan = null;
+    save(); renderAll(); renderResult();
+  }
+});
+
+/* 設定 */
+const bindNum = (sel, field, min, max, fallback) => {
+  $(sel).addEventListener("change", e => {
+    let v = parseFloat(e.target.value);
+    if(!isFinite(v)) v = fallback;
+    v = Math.min(max, Math.max(min, v));
+    db.settings[field] = v; save();
+    renderConditions(); renderSettings();
+    if(session.plan) renderResult();
+  });
+};
+bindNum("#capInput","capacity",1,8,4);
+bindNum("#stopInput","stopMin",0,30,2);
+bindNum("#speedCityInput","speedCity",5,60,16);
+bindNum("#speedFarInput","speedFar",5,90,38);
+bindNum("#detourInput","detour",1,2.5,1.35);
+$("#objSel").addEventListener("change", e => {
+  db.settings.objective = e.target.value; save();
+  if(session.plan) renderResult();
+});
+$("#apiKey").addEventListener("change", e => { db.settings.apiKey = e.target.value.trim(); save(); renderSettings(); });
+$("#fetchMatrix").addEventListener("click", fetchMatrix);
+$("#clearMatrix").addEventListener("click", () => {
+  if(!confirm("取得済みの実測所要時間を消して、内蔵計算に戻しますか？")) return;
+  db.matrix = {}; db.matrixAt = null; save(); renderSettings(); renderResult();
+});
+
+/* データ入出力 */
+$("#exportBtn").addEventListener("click", () => {
+  $("#dataArea").value = JSON.stringify(db, null, 2);
+  $("#dataArea").classList.remove("hidden");
+  toast("下の欄に書き出しました");
+});
+$("#importBtn").addEventListener("click", () => {
+  const area = $("#dataArea");
+  if(area.classList.contains("hidden")){
+    area.classList.remove("hidden"); area.focus();
+    alert("下の欄にJSONを貼り付けてから、もう一度「データを読み込む」を押してください。");
+    return;
+  }
+  const txt = area.value.trim();
+  if(!txt){ alert("読み込むJSONを貼り付けてください"); return; }
+  let d;
+  try{ d = JSON.parse(txt); }catch(err){ alert("JSONとして読み取れませんでした：" + err.message); return; }
+  if(!Array.isArray(d.locs) || !Array.isArray(d.staff)){ alert("このアプリのデータ形式ではありません"); return; }
+  if(!confirm("現在のデータを上書きします。よろしいですか？")) return;
+  localStorage.setItem(KEY, JSON.stringify(d));
+  db = load();
+  session.selected.clear();
+  for(const k in session.choice) delete session.choice[k];
+  session.plan = null;
+  renderAll(); renderResult();
+  toast("読み込みました");
+});
+$("#resetBtn").addEventListener("click", () => {
+  if(!confirm("スタッフ・場所・設定をすべて初期状態に戻します。よろしいですか？")) return;
+  db = freshDB(); save();
+  session.selected.clear();
+  for(const k in session.choice) delete session.choice[k];
+  session.plan = null;
+  renderAll(); renderResult();
+});
+
+/* ==========================================================================
+   端末間の引っ越しリンク
+   名簿をURLの「#」以降に畳み込む。#より後ろはサーバーに送られないので、
+   リンクを踏んだ端末のブラウザだけがデータを受け取る。
+   ========================================================================== */
+const LINK_MAX = 8000;          // これを超える見込みなら実測データを落とす
+const LINK_PREFIX = "#d=";
+
+function b64url(bytes){
+  let s = "";
+  for(const b of bytes) s += String.fromCharCode(b);
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function unb64url(str){
+  const bin = atob(str.replace(/-/g, "+").replace(/_/g, "/"));
+  const a = new Uint8Array(bin.length);
+  for(let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+  return a;
+}
+async function squeeze(bytes, mode){
+  const s = new (mode === "in" ? CompressionStream : DecompressionStream)("deflate-raw");
+  const w = s.writable.getWriter();
+  w.write(bytes); w.close();
+  return new Uint8Array(await new Response(s.readable).arrayBuffer());
+}
+async function encodePayload(obj){
+  const bytes = new TextEncoder().encode(JSON.stringify(obj));
+  if(typeof CompressionStream === "function"){
+    try{ return "z" + b64url(await squeeze(bytes, "in")); }catch(e){ /* 非対応なら素で送る */ }
+  }
+  return "p" + b64url(bytes);
+}
+async function decodePayload(str){
+  const bytes = unb64url(str.slice(1));
+  const raw = str[0] === "z" ? await squeeze(bytes, "out") : bytes;
+  return JSON.parse(new TextDecoder().decode(raw));
+}
+
+/** APIキーは暗号化されるときだけ同梱する。実測データは長さに収まるときだけ */
+function transferData(withMatrix){
+  const {apiKey, ...rest} = db.settings;
+  const settings = dataKey ? {...rest, apiKey} : rest;
+  const d = {locs:db.locs, staff:db.staff, settings};
+  if(withMatrix && Object.keys(db.matrix).length){ d.matrix = db.matrix; d.matrixAt = db.matrixAt; }
+  return d;
+}
+function baseUrl(){
+  return location.origin + location.pathname + location.search;
+}
+/** 保護中は、リンクの中身も金庫ごと（包みも含めて）運ぶ */
+async function wrapPayload(data){
+  const body = await encodePayload(data);
+  if(!dataKey) return body;
+  const env = await vaultSeal(body, rawDataKey, lastEnvelope.wraps);
+  return "e" + b64url(new TextEncoder().encode(JSON.stringify(env)));
+}
+async function unwrapPayload(raw){
+  if(raw[0] !== "e") return decodePayload(raw);
+  const env = JSON.parse(new TextDecoder().decode(unb64url(raw.slice(1))));
+  const secret = prompt("このリンクは保護されています。パスワード（またはマスターコード）を入力してください。");
+  if(secret === null) return null;
+  const opened = await vaultOpen(env, secret.trim());
+  if(!opened) throw new Error("wrong secret");
+  pendingVault = {env, key:opened.key, raw:opened.raw};   // 受け取った端末でも同じ保護を引き継ぐ
+  return decodePayload(opened.text);
+}
+let pendingVault = null;
+
+async function buildTransferLink(){
+  let payload = await wrapPayload(transferData(true));
+  let withMatrix = true;
+  if(baseUrl().length + LINK_PREFIX.length + payload.length > LINK_MAX){
+    payload = await wrapPayload(transferData(false));
+    withMatrix = false;
+  }
+  return {url: baseUrl() + LINK_PREFIX + payload, withMatrix, locked: !!dataKey};
+}
+
+/** URLに名簿が入っていれば取り込む */
+async function consumeTransferLink(){
+  const hash = location.hash;
+  if(!hash.startsWith(LINK_PREFIX)) return;
+  const raw = hash.slice(LINK_PREFIX.length);
+  history.replaceState(null, "", baseUrl());
+  const encrypted = decodeURIComponent(raw)[0] === "e";
+  let data;
+  try{ data = await unwrapPayload(decodeURIComponent(raw)); }
+  catch(e){
+    alert(encrypted
+      ? "パスワードが違います。もう一度リンクを開いてやり直してください。"
+      : "リンクの中身を読み取れませんでした。送る途中でリンクが切れていないかご確認ください。");
+    return;
+  }
+  if(data === null) return;   // パスワード入力をやめた
+  if(!data || !Array.isArray(data.locs) || !Array.isArray(data.staff) || !data.locs.length){
+    alert("このアプリのリンクではないようです。");
+    return;
+  }
+  const extra = data.matrix ? `\n実測所要時間 ${Object.keys(data.matrix).length} 区間も含まれています。` : "";
+  if(!confirm(`スタッフ${data.staff.length}人・場所${data.locs.length}件を読み込みます。${extra}\n`
+    + `この端末に入っている内容は置き換わります。よろしいですか？`)) return;
+  db.locs = data.locs.map(l => ({...l}));
+  db.staff = data.staff.map(x => ({...x, locIds:[...(x.locIds || [])]}));
+  db.settings = {...DEFAULT_SETTINGS, ...(data.settings || {}), apiKey: db.settings.apiKey};
+  if(data.matrix && typeof data.matrix === "object"){
+    db.matrix = {...data.matrix};
+    db.matrixAt = data.matrixAt || null;
+  }
+  if(pendingVault){
+    lastEnvelope = pendingVault.env;
+    dataKey = pendingVault.key;
+    rawDataKey = pendingVault.raw;
+    pendingVault = null;
+  }
+  save(); renderAll(); renderPwState(); renderResult();
+  toast("読み込みました");
+}
+
+$("#makeLink").addEventListener("click", async () => {
+  const btn = $("#makeLink");
+  btn.disabled = true;
+  try{
+    const {url, withMatrix, locked} = await buildTransferLink();
+    $("#linkBox").classList.remove("hidden");
+    $("#linkOut").value = url;
+    $("#linkNote").textContent =
+      (locked
+        ? "パスワードで暗号化してあります。受け取った端末で同じパスワードを入力すると開けます。"
+        : "このリンクには名簿がそのまま入っています。送り先にご注意ください。")
+      + (withMatrix
+        ? " Googleの実測所要時間も一緒に渡します。"
+        : " 実測所要時間はリンクが長くなりすぎるため外しました。受け取った端末で取得し直してください。");
+    $("#linkOut").focus(); $("#linkOut").select();
+  }catch(e){
+    alert("リンクを作れませんでした：" + e.message);
+  }finally{
+    btn.disabled = false;
+  }
+});
+$("#copyLink").addEventListener("click", () => copyText($("#linkOut").value));
+
+// すでにアプリを開いている状態でリンクを踏むと「#」しか変わらず再読み込みされないので、
+// その場合もここで拾う（読み込み後の replaceState では hashchange は起きないので往復しない）
+window.addEventListener("hashchange", consumeTransferLink);
+
+/* ==========================================================================
+   パスワード保護とマスターコード
+
+   名簿は「データ鍵」で暗号化し、そのデータ鍵を①パスワード ②マスターコード の
+   2通りで包む。どちらからでも同じデータ鍵が取り出せるので、マスターはいつでも
+   開けるし、パスワードを変えてもデータを暗号化し直す必要がない。
+   ========================================================================== */
+const PBKDF2_ROUNDS = 310000;
+const VAULT_VERSION = 2;
+/** 管理者用の固定コード。全インストール共通。担当者には見せない。 */
+const FIXED_MASTER_CODE = "PASTEL0901";
+// 解錠中のみメモリに置く。保存はしない。鍵そのものは取り出せない設定にしてあるので、
+// 包み直し（パスワード変更など）のために生バイトも別に持つ。
+let dataKey = null, rawDataKey = null;
+let lastEnvelope = null;
+
+const subtle = () => (window.crypto && window.crypto.subtle) || null;
+const randBytes = n => window.crypto.getRandomValues(new Uint8Array(n));
+
+async function deriveKey(secret, salt, usage){
+  const base = await subtle().importKey("raw", new TextEncoder().encode(secret), "PBKDF2", false, ["deriveKey"]);
+  return subtle().deriveKey(
+    {name:"PBKDF2", salt, iterations:PBKDF2_ROUNDS, hash:"SHA-256"},
+    base, {name:"AES-GCM", length:256}, false, usage || ["encrypt","decrypt"]);
+}
+async function aesEncrypt(key, bytes){
+  const iv = randBytes(12);
+  const ct = new Uint8Array(await subtle().encrypt({name:"AES-GCM", iv}, key, bytes));
+  return {iv:b64url(iv), ct:b64url(ct)};
+}
+async function aesDecrypt(key, iv, ct){
+  return new Uint8Array(await subtle().decrypt({name:"AES-GCM", iv:unb64url(iv)}, key, unb64url(ct)));
+}
+
+/** データ鍵を、合言葉から作った鍵で包む */
+async function wrapKey(secret, rawDataKey){
+  const salt = randBytes(16);
+  const kek = await deriveKey(secret, salt);
+  const {iv, ct} = await aesEncrypt(kek, rawDataKey);
+  return {salt:b64url(salt), iv, ct};
+}
+async function unwrapKey(secret, wrap){
+  const kek = await deriveKey(secret, unb64url(wrap.salt));
+  const raw = await aesDecrypt(kek, wrap.iv, wrap.ct);       // 合言葉が違えばここで例外
+  const key = await subtle().importKey("raw", raw, {name:"AES-GCM"}, false, ["encrypt","decrypt"]);
+  return {key, raw};
+}
+
+/** 読みやすい形のマスターコードを作る（紛らわしい文字は使わない） */
+function makeMasterCode(){
+  const abc = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";   // I/O/0/1 を除く
+  const buf = randBytes(20);
+  let out = "";
+  for(let i = 0; i < 20; i++){
+    out += abc[buf[i] % abc.length];
+    if(i % 5 === 4 && i < 19) out += "-";
+  }
+  return out;                                        // 例）A3KDP-9RQ2M-XZTF7-HN45W
+}
+
+/** 中身（文字列）を金庫に封じる */
+async function vaultSeal(plainText, rawDataKey, wraps){
+  const key = await subtle().importKey("raw", rawDataKey, {name:"AES-GCM"}, false, ["encrypt","decrypt"]);
+  const body = await aesEncrypt(key, new TextEncoder().encode(plainText));
+  return {enc:VAULT_VERSION, wraps, iv:body.iv, ct:body.ct};
+}
+/** パスワードでもマスターコードでも開く。開いた鍵も返す */
+async function vaultOpen(env, secret){
+  if(env.enc === 1){                                  // 旧形式（合言葉から直接暗号化）
+    const key = await deriveKey(secret, unb64url(env.salt));
+    const raw = await aesDecrypt(key, env.iv, env.ct);
+    return {text:new TextDecoder().decode(raw), key:null, legacy:true};
+  }
+  for(const which of ["password", "master"]){
+    const wrap = env.wraps && env.wraps[which];
+    if(!wrap) continue;
+    try{
+      const {key, raw} = await unwrapKey(secret, wrap);
+      const body = await aesDecrypt(key, env.iv, env.ct);
+      return {text:new TextDecoder().decode(body), key, raw, which};
+    }catch(e){ /* 次を試す */ }
+  }
+  return null;
+}
+
+/** いまのデータを、解錠中の鍵で封じ直す（包みはそのまま） */
+async function sealDb(){
+  const body = await aesEncrypt(dataKey, new TextEncoder().encode(JSON.stringify(db)));
+  return {enc:VAULT_VERSION, wraps:lastEnvelope.wraps, iv:body.iv, ct:body.ct};
+}
+
+async function unlockWith(secret){
+  const env = storedEnvelope();
+  if(!env) return false;
+  const opened = await vaultOpen(env, secret);
+  if(!opened) return false;
+  const d = JSON.parse(opened.text);
+  db = {
+    locs: Array.isArray(d.locs) && d.locs.length ? d.locs : freshDB().locs,
+    staff: Array.isArray(d.staff) ? d.staff : [],
+    settings: {...DEFAULT_SETTINGS, ...(d.settings || {})},
+    matrix: (d.matrix && typeof d.matrix === "object") ? d.matrix : {},
+    matrixAt: d.matrixAt || null,
+  };
+  if(opened.legacy){
+    // 旧形式はマスターコードを持たないので、この場で新形式へ作り直す
+    const {env:newEnv} = await protectWith(secret, FIXED_MASTER_CODE);
+    lastEnvelope = newEnv;
+    saveLocal();
+    return true;
+  }
+  dataKey = opened.key;
+  rawDataKey = opened.raw;
+  lastEnvelope = env;
+  return true;
+}
+
+/** パスワード（と任意でマスターコード）で保護をかけ直す */
+async function protectWith(password, masterCode){
+  const raw = randBytes(32);
+  const wraps = {password: await wrapKey(password, raw)};
+  const master = masterCode || makeMasterCode();
+  wraps.master = await wrapKey(master, raw);
+  const env = await vaultSeal(JSON.stringify(db), raw, wraps);
+  dataKey = await subtle().importKey("raw", raw, {name:"AES-GCM"}, false, ["encrypt","decrypt"]);
+  rawDataKey = raw;
+  return {env, master};
+}
+
+/** いまの金庫を、その合言葉で開けるか確かめる（パスワードでもマスターコードでも可） */
+async function verifySecret(secret){
+  if(!lastEnvelope || !lastEnvelope.wraps) return false;
+  for(const which of ["password", "master"]){
+    const wrap = lastEnvelope.wraps[which];
+    if(!wrap) continue;
+    try{ await unwrapKey(secret, wrap); return which; }
+    catch(e){ /* 次を試す */ }
+  }
+  return false;
+}
+
+function renderUserPwState(){
+  const on = !!dataKey;
+  const badge = $("#userPwBadge");
+  badge.textContent = on ? "設定済み" : "未設定";
+  badge.className = "badge" + (on ? " on" : "");
+  $("#userPwOn").classList.toggle("hidden", !on);
+  $("#userPwOff").classList.toggle("hidden", on);
+}
+
+/** 担当者が自分たちでパスワードを変える。マスターコードは変わらない */
+$("#initSetPw").addEventListener("click", async () => {
+  if(!subtle()){
+    alert("このブラウザでは暗号化が使えません。https で開いているかご確認ください。");
+    return;
+  }
+  const a = $("#initPw1").value, b = $("#initPw2").value;
+  if(a.length < 8){ alert("8文字以上にしてください"); return; }
+  if(a !== b){ alert("2つのパスワードが一致しません"); return; }
+  const btn = $("#initSetPw");
+  btn.disabled = true;
+  try{
+    const {env} = await protectWith(a, FIXED_MASTER_CODE);
+    lastEnvelope = env;
+    saveLocal();
+    scheduleSync();
+    $("#initPw1").value = ""; $("#initPw2").value = "";
+    renderPwState();
+    toast("パスワードを設定しました");
+  }catch(e){
+    console.error(e);
+    alert("パスワードを設定できませんでした：" + e.message);
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+$("#userChangePw").addEventListener("click", () => {
+  if(!dataKey) return;
+  openDialog("パスワードを変更", `
+    <label class="fld"><span>いまのパスワード</span>
+      <input type="password" id="cpNow" autocomplete="current-password"></label>
+    <label class="fld"><span>新しいパスワード（8文字以上）</span>
+      <input type="password" id="cpNew" autocomplete="new-password"></label>
+    <label class="fld"><span>確認のためもう一度</span>
+      <input type="password" id="cpNew2" autocomplete="new-password"></label>
+    <p class="hint" style="margin-top:0">変更したら、ほかの担当者にも新しいパスワードを伝えてください。</p>`,
+    () => {
+      const now = $("#cpNow").value, a = $("#cpNew").value, b = $("#cpNew2").value;
+      if(a.length < 8){ alert("新しいパスワードは8文字以上にしてください"); return false; }
+      if(a !== b){ alert("新しいパスワードが一致しません"); return false; }
+      // 確認は非同期なので、いったん閉じてから処理する
+      (async () => {
+        const ok = await verifySecret(now.trim());
+        if(!ok){ alert("いまのパスワードが違います。変更していません。"); return; }
+        try{
+          lastEnvelope = {...lastEnvelope, wraps:{...lastEnvelope.wraps, password: await wrapKey(a, rawDataKey)}};
+          saveLocal();
+          scheduleSync();
+          toast("パスワードを変更しました");
+        }catch(e){
+          console.error(e);
+          alert("変更できませんでした：" + e.message);
+        }
+      })();
+    }, "変更する");
+});
+
+function renderPwState(){
+  const on = !!dataKey;
+  const badge = $("#pwBadge");
+  badge.textContent = on ? "保護中" : "未設定";
+  badge.className = "badge" + (on ? " on" : "");
+  $("#clearPw").disabled = !on;
+  $("#newMaster").disabled = !on;
+  renderUserPwState();
+}
+
+const MASTER_MIN = 12;
+
+/** マスターコードを自分で決めるか、自動で作るか */
+function askMasterCode(){
+  return new Promise(resolve => {
+    openDialog("マスターコードを作り直す", `
+      <label class="fld"><span>新しいマスターコード（${MASTER_MIN}文字以上）</span>
+        <input type="text" id="mc2" autocomplete="off" spellcheck="false"
+          placeholder="空欄なら自動で作ります"></label>
+      <p class="hint" style="margin-top:0">
+        管理画面に入る鍵であり、パスワードを忘れたときの復旧手段でもあります。
+        いまのコードは使えなくなります。</p>`,
+      () => {
+        const v = $("#mc2").value.trim();
+        if(v && v.length < MASTER_MIN){
+          alert(`${MASTER_MIN}文字以上にしてください`); return false;
+        }
+        resolve(v || "");
+      }, "作り直す", () => resolve(null));
+  });
+}
+
+function showMasterCode(code, isNew){
+  openDialog(isNew ? "マスターコードができました" : "マスターコード", `
+    <p class="hint" style="margin-top:0">管理画面に入る鍵です。
+      パスワードを忘れたときに名簿を開く鍵でもあります。</p>
+    <div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:19px;font-weight:700;
+      letter-spacing:.06em;text-align:center;padding:14px;background:var(--bg);
+      border:1px solid var(--line);border-radius:10px;margin-bottom:12px;word-break:break-all"
+      id="mcText">${esc(code)}</div>
+    <button type="button" class="btn wide" id="mcCopy">コードをコピー</button>
+    <div class="warnbox" style="margin-top:12px">
+      <b>いま控えてください。この画面を閉じると二度と表示されません。</b>
+      パスワードを知っていれば作り直せますが、パスワードもコードも失うと名簿は取り出せません。
+      アプリの外（パスワード管理ツールや金庫）に保管してください。
+    </div>`, null, "");
+  $("#mcCopy").addEventListener("click", () => copyText(code));
+}
+
+$("#newMaster").addEventListener("click", async () => {
+  if(!dataKey) return;
+  const chosen = await askMasterCode();
+  if(chosen === null) return;
+  try{
+    const master = chosen || makeMasterCode();
+    lastEnvelope = {...lastEnvelope, wraps:{...lastEnvelope.wraps, master: await wrapKey(master, rawDataKey)}};
+    saveLocal();
+    showMasterCode(master, true);
+  }catch(e){
+    console.error(e);
+    alert("マスターコードを作り直せませんでした：" + e.message);
+  }
+});
+
+$("#clearPw").addEventListener("click", () => {
+  if(!dataKey) return;
+  if(!confirm("保護を解除すると、名簿は暗号化されずにこの端末に保存されます。よろしいですか？")) return;
+  dataKey = null; rawDataKey = null; lastEnvelope = null;
+  saveLocal();
+  renderPwState();
+  toast("保護を解除しました");
+});
+
+/* --- 起動時のロック --- */
+function showLock(){ $("#lock").classList.remove("hidden"); $("#lockPw").focus(); }
+function hideLock(){ $("#lock").classList.add("hidden"); }
+
+$("#lockForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const btn = $("#lockGo"), err = $("#lockErr");
+  btn.disabled = true; btn.textContent = "確認中…";
+  err.classList.add("hidden");
+  const ok = await unlockWith($("#lockPw").value.trim()).catch(() => false);
+  btn.disabled = false; btn.textContent = "開く";
+  if(!ok){
+    err.textContent = "パスワードまたはマスターコードが違います。";
+    err.classList.remove("hidden");
+    $("#lockPw").select();
+    return;
+  }
+  $("#lockPw").value = "";
+  hideLock();
+  renderAll(); renderPwState(); renderShareState(); renderResult();
+  consumeTransferLink();
+  if(shareCfg){
+    setShareStatus("同期中…");
+    pullShared()
+      .then(r => setShareStatus(r === true ? "共有先の内容を取り込みました" : "共有中です", "ok"))
+      .catch(e => setShareStatus(e.message, "err"));
+  }
+});
+
+$("#lockForgot").addEventListener("click", () => {
+  alert("マスターコードをお持ちなら、そのままパスワード欄に入力すると開けます。\n\n"
+    + "どちらも分からない場合、この端末の名簿を取り出す方法はありません。");
+});
+
+/* ==========================================================================
+   みんなで共有する（Firebase Firestore）
+
+   預けるのは暗号化した金庫そのもの。鍵は端末を離れないので、保管先には
+   名前も駅名も読めない。全員が同じパスワード（またはマスターコード）で開ける。
+   Firebase の設定値は公開前提のもので、秘密ではない。
+   ========================================================================== */
+const SHARE_KEY = "shuttle-router.share";
+const SHARE_DOC = "shuttle/roster";
+
+let shareCfg = null;        // {apiKey, projectId}
+let shareToken = null;      // 匿名ログインのトークン
+let shareTokenAt = 0;
+let lastSeenRemoteAt = 0;   // 最後に取り込んだ相手側の更新時刻
+let syncTimer = null;
+let syncBusy = false;
+
+function loadShareCfg(){
+  try{
+    const raw = localStorage.getItem(SHARE_KEY);
+    const d = raw ? JSON.parse(raw) : null;
+    return (d && d.apiKey && d.projectId) ? d : null;
+  }catch(e){ return null; }
+}
+function saveShareCfg(cfg){
+  try{
+    if(cfg) localStorage.setItem(SHARE_KEY, JSON.stringify(cfg));
+    else localStorage.removeItem(SHARE_KEY);
+  }catch(e){ /* 保存できなくても動作は続ける */ }
+}
+/** 貼り付けられた文字列から apiKey と projectId を拾う */
+function parseShareCfg(text){
+  const pick = k => {
+    const m = text.match(new RegExp(k + '["\']?\\s*[:=]\\s*["\']([^"\']+)["\']'));
+    return m ? m[1] : null;
+  };
+  const apiKey = pick("apiKey"), projectId = pick("projectId");
+  return (apiKey && projectId) ? {apiKey, projectId} : null;
+}
+
+async function shareAuth(){
+  if(shareToken && Date.now() - shareTokenAt < 40 * 60 * 1000) return shareToken;
+  const res = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${encodeURIComponent(shareCfg.apiKey)}`,
+    {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({returnSecureToken:true})});
+  if(!res.ok){
+    const t = await res.text().catch(() => "");
+    throw new Error("ログインできません（" + res.status + "）" +
+      (t.includes("ADMIN_ONLY") || t.includes("OPERATION_NOT_ALLOWED")
+        ? "。Firebase の Authentication で「匿名」を有効にしてください" : ""));
+  }
+  const j = await res.json();
+  shareToken = j.idToken; shareTokenAt = Date.now();
+  return shareToken;
+}
+const shareDocUrl = () =>
+  `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(shareCfg.projectId)}`
+  + `/databases/(default)/documents/${SHARE_DOC}`;
+
+/** 預けてある金庫を取ってくる。無ければ null */
+async function shareFetch(){
+  const token = await shareAuth();
+  const res = await fetch(shareDocUrl(), {headers:{Authorization:"Bearer " + token}});
+  if(res.status === 404) return null;
+  if(!res.ok){
+    const t = await res.text().catch(() => "");
+    throw new Error("読み込めません（" + res.status + "）" +
+      (res.status === 403 ? "。Firestore のルールをご確認ください" : "") + (t ? "：" + t.slice(0,120) : ""));
+  }
+  const j = await res.json();
+  const f = j.fields || {};
+  if(!f.vault || !f.vault.stringValue) return null;
+  return {vault: JSON.parse(f.vault.stringValue), updatedAt: Number(f.updatedAt?.integerValue || 0)};
+}
+async function sharePush(vault, updatedAt){
+  const token = await shareAuth();
+  const res = await fetch(shareDocUrl(), {
+    method:"PATCH",
+    headers:{Authorization:"Bearer " + token, "Content-Type":"application/json"},
+    body: JSON.stringify({fields:{
+      vault:{stringValue: JSON.stringify(vault)},
+      updatedAt:{integerValue: String(updatedAt)},
+    }}),
+  });
+  if(!res.ok){
+    const t = await res.text().catch(() => "");
+    throw new Error("保存できません（" + res.status + "）" +
+      (res.status === 403 ? "。Firestore のルールをご確認ください" : "") + (t ? "：" + t.slice(0,120) : ""));
+  }
+}
+
+function setShareStatus(text, tone){
+  const el = $("#shareStatus");
+  if(!el) return;
+  el.textContent = text;
+  el.style.color = tone === "err" ? "var(--danger)" : tone === "ok" ? "var(--ok)" : "var(--sub)";
+}
+function renderShareState(){
+  const on = !!shareCfg;
+  const badge = $("#shareBadge");
+  badge.textContent = on ? "共有中" : "未設定";
+  badge.className = "badge" + (on ? " on" : "");
+  $("#shareOff").classList.toggle("hidden", on);
+  $("#shareOnBox").classList.toggle("hidden", !on);
+  if(on) $("#shareStatus").textContent = $("#shareStatus").textContent || "接続を待っています…";
+}
+
+/** 相手側の金庫を取り込む。取り込めたら true */
+async function pullShared(){
+  const remote = await shareFetch();
+  if(!remote) return false;
+  if(!dataKey){
+    // まだ解錠していない：預かってきた金庫をロック画面の対象にする
+    lastEnvelope = remote.vault;
+    lastSeenRemoteAt = remote.updatedAt;
+    return "locked";
+  }
+  if(remote.updatedAt <= lastSeenRemoteAt) return false;
+  // 参加時に鍵ごと引き継いでいるので、手元の鍵でそのまま開ける
+  let text = null;
+  try{
+    const body = await aesDecrypt(dataKey, remote.vault.iv, remote.vault.ct);
+    text = new TextDecoder().decode(body);
+  }catch(e){
+    setShareStatus("共有先のデータが別のパスワードで保護されています。パスワードを揃えてください。", "err");
+    return false;
+  }
+  const d = JSON.parse(text);
+  db = {
+    locs: Array.isArray(d.locs) && d.locs.length ? d.locs : db.locs,
+    staff: Array.isArray(d.staff) ? d.staff : db.staff,
+    settings: {...DEFAULT_SETTINGS, ...(d.settings || {})},
+    matrix: (d.matrix && typeof d.matrix === "object") ? d.matrix : {},
+    matrixAt: d.matrixAt || null,
+  };
+  lastEnvelope = remote.vault;
+  lastSeenRemoteAt = remote.updatedAt;
+  saveLocal();
+  pruneSession();
+  renderAll(); renderPwState(); renderShareState(); renderResult();
+  return true;
+}
+
+/** 手元の内容を預ける。他の人が先に更新していたら確認する */
+async function pushShared(){
+  if(!shareCfg || !dataKey) return;
+  const remote = await shareFetch();
+  if(remote && remote.updatedAt > lastSeenRemoteAt){
+    const take = confirm("ほかの担当者がこの間に名簿を更新しています。\n"
+      + "「OK」でそちらを取り込みます（この端末の変更は失われます）。\n"
+      + "「キャンセル」でこの端末の内容を反映します。");
+    if(take){ lastSeenRemoteAt = 0; await pullShared(); return; }
+  }
+  const now = Date.now();
+  lastEnvelope = await sealDb();
+  saveLocal();
+  await sharePush(lastEnvelope, now);
+  lastSeenRemoteAt = now;
+  setShareStatus("最終同期 " + new Date(now).toLocaleTimeString("ja-JP", {hour:"2-digit", minute:"2-digit"}), "ok");
+}
+
+/** 保存のたびに呼ばれる。まとめて少し遅らせて送る */
+function scheduleSync(){
+  if(!shareCfg || !dataKey) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(async () => {
+    if(syncBusy) { scheduleSync(); return; }
+    syncBusy = true;
+    setShareStatus("同期中…");
+    try{ await pushShared(); }
+    catch(e){ setShareStatus(e.message, "err"); }
+    finally{ syncBusy = false; }
+  }, 1200);
+}
+
+async function syncNow(){
+  if(!shareCfg) return;
+  if(syncBusy) return;
+  syncBusy = true;
+  setShareStatus("同期中…");
+  try{
+    await pullShared();
+    await pushShared();
+  }catch(e){ setShareStatus(e.message, "err"); }
+  finally{ syncBusy = false; }
+}
+
+/** 共有先の金庫を、入力された合言葉で開いて鍵ごと引き継ぐ */
+async function adoptRemote(vault, updatedAt){
+  for(let i = 0; i < 3; i++){
+    const secret = prompt(i === 0
+      ? "共有先の名簿を開きます。ほかの担当者と同じパスワード（またはマスターコード）を入力してください。"
+      : "パスワードが違います。もう一度入力してください。");
+    if(secret === null) return false;
+    const opened = await vaultOpen(vault, secret.trim()).catch(() => null);
+    if(!opened) continue;
+    const d = JSON.parse(opened.text);
+    db = {
+      locs: Array.isArray(d.locs) && d.locs.length ? d.locs : freshDB().locs,
+      staff: Array.isArray(d.staff) ? d.staff : [],
+      settings: {...DEFAULT_SETTINGS, ...(d.settings || {})},
+      matrix: (d.matrix && typeof d.matrix === "object") ? d.matrix : {},
+      matrixAt: d.matrixAt || null,
+    };
+    dataKey = opened.key;
+    rawDataKey = opened.raw;
+    lastEnvelope = vault;
+    lastSeenRemoteAt = updatedAt;
+    saveLocal();
+    pruneSession();
+    return true;
+  }
+  return false;
+}
+
+$("#shareOn").addEventListener("click", async () => {
+  if(!subtle()){
+    alert("このブラウザでは暗号化が使えません。https で開いているかご確認ください。");
+    return;
+  }
+  const cfg = parseShareCfg($("#shareCfgIn").value);
+  if(!cfg){
+    alert("apiKey と projectId が読み取れませんでした。\nFirebase の「ウェブアプリ」の設定をそのまま貼り付けてください。");
+    return;
+  }
+  const btn = $("#shareOn");
+  btn.disabled = true;
+  const prev = shareCfg;
+  shareCfg = cfg;
+  try{
+    const remote = await shareFetch();
+
+    if(remote){
+      // すでに誰かが預けている：その金庫を開いて、鍵ごと引き継ぐ
+      const ok = await adoptRemote(remote.vault, remote.updatedAt);
+      if(!ok){
+        shareCfg = prev;
+        alert("共有先の名簿を開けませんでした。\nほかの担当者と同じパスワード、またはマスターコードが必要です。");
+        return;
+      }
+      saveShareCfg(cfg);
+      renderAll(); renderPwState(); renderShareState(); renderResult();
+      setShareStatus("共有に参加しました。ほかの担当者の名簿を取り込みました。", "ok");
+      return;
+    }
+
+    // 最初の1人：この端末の内容を預ける。暗号化が要るのでパスワードが必須
+    if(!dataKey){
+      shareCfg = prev;
+      alert("先に「パスワード」タブでパスワードを設定してください。\n共有先には暗号化したまま預けるため、パスワードが必要です。");
+      return;
+    }
+    await pushShared();
+    saveShareCfg(cfg);
+    renderShareState();
+    setShareStatus("共有を始めました。ほかの担当者にも同じ設定とパスワードを渡してください。", "ok");
+  }catch(e){
+    shareCfg = prev;
+    alert("共有を始められませんでした：\n" + e.message);
+  }finally{
+    btn.disabled = false;
+    renderShareState();
+  }
+});
+
+$("#syncNow").addEventListener("click", syncNow);
+$("#shareStop").addEventListener("click", () => {
+  if(!confirm("この端末での共有をやめます。\n名簿はこの端末に残り、以後は共有先に反映されません。")) return;
+  shareCfg = null; shareToken = null; lastSeenRemoteAt = 0;
+  saveShareCfg(null);
+  renderShareState();
+  toast("共有をやめました");
+});
+
+// ほかの端末での変更を拾うため、画面に戻ってきたときに取りに行く
+document.addEventListener("visibilitychange", () => {
+  if(document.visibilityState === "visible" && shareCfg && dataKey && !syncBusy){
+    syncBusy = true;
+    pullShared().catch(e => setShareStatus(e.message, "err")).finally(() => { syncBusy = false; });
+  }
+});
+
+/* ==========================================================================
+   管理画面
+   ふだんの担当者には見せない。タイトルを5回続けてタップすると開く。
+   パスワードを設定してある場合は、マスターコードを知っている人だけが入れる。
+   ========================================================================== */
+let tapCount = 0, tapTimer = null;
+
+function openAdmin(){
+  $("#admin").classList.remove("hidden");
+  $("#admin").scrollTop = 0;
+  document.body.style.overflow = "hidden";
+  renderSettings(); renderPwState(); renderShareState();
+}
+function closeAdmin(){
+  $("#admin").classList.add("hidden");
+  document.body.style.overflow = "";
+}
+
+async function requestAdmin(){
+  // まだ保護をかけていないなら、そのまま開く（これから設定する段階のため）
+  if(!lastEnvelope || !lastEnvelope.wraps || !lastEnvelope.wraps.master){ openAdmin(); return; }
+  const code = prompt("管理画面を開きます。マスターコードを入力してください。");
+  if(code === null) return;
+  try{
+    await unwrapKey(code.trim(), lastEnvelope.wraps.master);   // 違えば例外
+    openAdmin();
+  }catch(e){
+    alert("マスターコードが違います。");
+  }
+}
+
+$("#appTitle").addEventListener("click", () => {
+  tapCount++;
+  clearTimeout(tapTimer);
+  if(tapCount >= 5){
+    tapCount = 0;
+    requestAdmin();
+    return;
+  }
+  tapTimer = setTimeout(() => { tapCount = 0; }, 1500);
+});
+$("#adminClose").addEventListener("click", closeAdmin);
+
+/* 起動 */
+shareCfg = loadShareCfg();
+
+(async function start(){
+  // 共有中でこの端末にまだ名簿が無いときは、預けてある金庫を取ってきて解錠する
+  if(shareCfg && !storedEnvelope()){
+    try{
+      const r = await pullShared();
+      if(r === "locked"){
+        try{ localStorage.setItem(KEY, JSON.stringify(lastEnvelope)); }catch(e){}
+      }
+    }catch(e){ console.warn("共有先から取得できませんでした", e); }
+  }
+  if(storedEnvelope()){
+    renderShareState();
+    showLock();
+    return;
+  }
+  renderAll();
+  renderPwState();
+  renderShareState();
+  renderResult();
+  consumeTransferLink();
+})();
+</script>
+</body>
+</html>
