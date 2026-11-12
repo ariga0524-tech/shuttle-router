@@ -504,19 +504,26 @@ let db = load();
 
 /* ---- 今日の入力（タブを閉じても同じ日のうちは残す） ---------------------- */
 const SESSION_KEY = "shuttle-router.session.v1";
+const DAY_START_HOUR = 5;   // 日付の切り替わりは深夜0時ではなく朝5時。4:59までは前日扱い
+/** 「業務日」を YYYY-MM-DD で返す。端末のローカル時刻を使う（UTCに変換しない）*/
+function businessDateStr(d = new Date()){
+  const shifted = new Date(d.getTime() - DAY_START_HOUR * 3600 * 1000);
+  const pad = n => String(n).padStart(2, "0");
+  return `${shifted.getFullYear()}-${pad(shifted.getMonth()+1)}-${pad(shifted.getDate())}`;
+}
 function loadSession(){
   try{
     const raw = localStorage.getItem(SESSION_KEY);
     if(!raw) return null;
     const d = JSON.parse(raw);
-    if(d.date !== new Date().toISOString().slice(0,10)) return null;   // 日付が変わったら今日の分とはみなさない
+    if(d.date !== businessDateStr()) return null;   // 業務日が変わったら今日の分とはみなさない
     return d;
   }catch(e){ return null; }
 }
 function saveSession(){
   try{
     localStorage.setItem(SESSION_KEY, JSON.stringify({
-      date: new Date().toISOString().slice(0,10),
+      date: businessDateStr(),
       selected: [...session.selected],
       choice: session.choice,
       plan: session.plan,
