@@ -1389,7 +1389,10 @@ async function geocodeAddress(rawQuery){
 function editLoc(id, afterCreate){
   const l = id ? locById(id) : null;
   if(id && !l) return;
-  let found = null;   // 検索で見つかった{lat,lng,address}。保存時はこれを優先する
+  // 編集時は、いまの住所をすでに「確認済み」として初期化する。そうしないと、
+  // 名前だけ変更したい場合まで毎回ムダな再検索が走ってしまう。
+  let found = l ? {lat: l.lat, lng: l.lng, address: l.address} : null;
+  let foundQuery = (l && l.address) ? l.address : null;
 
   openDialog(id ? "場所を編集" : "場所を追加", `
     <label class="fld"><span>場所の名前</span><input type="text" id="fLName" value="${esc(l?.name || "")}" placeholder="例）中野坂上駅"></label>
@@ -1422,21 +1425,21 @@ function editLoc(id, afterCreate){
   const go = async () => {
     const q = $("#fAddr").value.trim();
     const box = $("#fAddrResult"), btn = $("#fAddrGo");
-    if(!q){ box.textContent = ""; found = null; return; }
+    if(!q){ box.textContent = ""; found = null; foundQuery = null; return; }
     btn.disabled = true; box.style.color = "var(--sub)"; box.textContent = "検索中…";
     try{
       const r = await geocodeAddress(q);
       if(!r){
-        found = null;
+        found = null; foundQuery = null;
         box.style.color = "var(--danger)";
         box.textContent = "見つかりませんでした。住所の書き方を変えるか、近くの駅名・施設名で試してください。";
       }else{
-        found = r;
+        found = r; foundQuery = q;
         box.style.color = "var(--ok)";
         box.textContent = "→ " + r.address;
       }
     }catch(e){
-      found = null;
+      found = null; foundQuery = null;
       box.style.color = "var(--danger)";
       box.textContent = "検索できませんでした（通信エラー）。もう一度お試しください。";
     }finally{
@@ -1447,6 +1450,31 @@ function editLoc(id, afterCreate){
   $("#fAddr").addEventListener("keydown", e => {
     if(e.key === "Enter"){ e.preventDefault(); go(); }
   });
+
+  // 「保存」を押した時点で、住所欄の文字がまだ検索されていない（または検索後に
+  // 書き換えられた）場合は、保存の前に自動で検索する。押し忘れて古いデータの
+  // まま保存されてしまう事故を防ぐため。
+  // #dlgOk は他の種類のダイアログ（スタッフ追加など）とも共有する固定要素なので、
+  // ここで付けたリスナーは、このダイアログが閉じた時点で必ず外す
+  // （外さないと、次に別のダイアログで保存したときに誤って発火してしまう）。
+  const okBtn = $("#dlgOk");
+  const freshOkBtn = okBtn.cloneNode(true);
+  okBtn.replaceWith(freshOkBtn);
+  const onSaveClick = async e => {
+    const q = $("#fAddr").value.trim();
+    if(!q || (found && foundQuery === q)) return;   // 空欄／検索済みで一致なら通常どおり保存へ
+    e.preventDefault();
+    const btn = $("#dlgOk"), label = btn.textContent;
+    btn.disabled = true; btn.textContent = "確認中…";
+    await go();
+    btn.disabled = false; btn.textContent = label;
+    if(found && foundQuery === q) $("#dlg").close("ok");
+    // 見つからなかった場合は go() 内のエラー表示に従う。ダイアログは開いたまま
+  };
+  freshOkBtn.addEventListener("click", onSaveClick);
+  $("#dlg").addEventListener("close", () => {
+    freshOkBtn.removeEventListener("click", onSaveClick);
+  }, {once:true});
 }
 
 /** 「その他」の場所を選ぶ */
