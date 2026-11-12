@@ -1168,9 +1168,15 @@ function renderResult(){
     html += `<div class="carcard">
       <div class="carhead" style="background:${CAR_COLORS[ci % 3]}">
         <span style="display:flex;align-items:baseline;gap:8px;min-width:0">
-          <input type="text" data-driver="${ci}" value="${esc(session.driverNames[ci] || "")}" placeholder="車${ci+1}のドライバー名"
-            style="border:0;border-bottom:1px solid currentColor;background:transparent;color:inherit;font:inherit;
-              font-weight:700;font-size:15px;padding:1px 2px;width:8em;min-width:0">
+          ${db.drivers.length ? `<select data-driver="${ci}"
+              style="border:0;border-bottom:1px solid currentColor;background:transparent;color:inherit;font:inherit;
+                font-weight:700;font-size:15px;padding:1px 2px;width:8em;min-width:0">
+              <option value="">（未定）</option>
+              ${db.drivers.map(d => `<option value="${esc(d.name)}" ${d.name===(session.driverNames[ci]||"")?"selected":""}>${esc(d.name)}</option>`).join("")}
+            </select>`
+          : `<input type="text" data-driver="${ci}" value="${esc(session.driverNames[ci] || "")}" placeholder="車${ci+1}のドライバー名"
+              style="border:0;border-bottom:1px solid currentColor;background:transparent;color:inherit;font:inherit;
+                font-weight:700;font-size:15px;padding:1px 2px;width:8em;min-width:0">`}
           <span style="font-weight:400;font-size:13px;white-space:nowrap"> ・ ${people}人${single ? "" : ` ・ ${car.trips.length}便`}</span>
         </span>
         <span class="tm">${single
