@@ -501,8 +501,40 @@ function freshDB(){
 
 /* ---- 状態 -------------------------------------------------------------- */
 let db = load();
-/** 今日の入力（保存しない）: selected=出勤者ID / choice={staffId:locId} */
-const session = {selected:new Set(), choice:{}, plan:null};
+
+/* ---- 今日の入力（タブを閉じても同じ日のうちは残す） ---------------------- */
+const SESSION_KEY = "shuttle-router.session.v1";
+function loadSession(){
+  try{
+    const raw = localStorage.getItem(SESSION_KEY);
+    if(!raw) return null;
+    const d = JSON.parse(raw);
+    if(d.date !== new Date().toISOString().slice(0,10)) return null;   // 日付が変わったら今日の分とはみなさない
+    return d;
+  }catch(e){ return null; }
+}
+function saveSession(){
+  try{
+    localStorage.setItem(SESSION_KEY, JSON.stringify({
+      date: new Date().toISOString().slice(0,10),
+      selected: [...session.selected],
+      choice: session.choice,
+      plan: session.plan,
+      driverNames: session.driverNames,
+    }));
+  }catch(e){ /* 保存できなくても今日の操作自体は続けられる */ }
+}
+
+/** selected=出勤者ID / choice={staffId:locId} / driverNames={車の番号:ドライバー名} */
+const session = {selected:new Set(), choice:{}, plan:null, driverNames:{}};
+(() => {
+  const saved = loadSession();
+  if(!saved) return;
+  session.selected = new Set(saved.selected || []);
+  session.choice = saved.choice || {};
+  session.plan = saved.plan || null;
+  session.driverNames = saved.driverNames || {};
+})();
 
 /** 保存されているのが暗号化データなら、その中身を返す（旧形式 enc:1 も含む） */
 function storedEnvelope(){
@@ -1048,6 +1080,7 @@ function renderAssign(){
 
 /* ---- 下部バー ------------------------------------------------------------ */
 function renderBar(){
+  saveSession();
   const n = session.selected.size;
   const ready = n > 0 && [...session.selected].every(id => session.choice[id]);
   $("#bar").classList.toggle("hidden", n === 0 || $("#tab-plan").classList.contains("hidden"));
@@ -1059,6 +1092,7 @@ function renderBar(){
 
 /* ---- ステップ4：順路 ----------------------------------------------------- */
 function renderResult(){
+  saveSession();
   const box = $("#resultBox");
   $("#secResult").classList.toggle("hidden", !session.plan);
   if(!session.plan) return;
@@ -1086,7 +1120,13 @@ function renderResult(){
     const solo = single ? evalRoute(originId, car.trips[0].stops) : null;
     html += `<div class="carcard">
       <div class="carhead" style="background:${CAR_COLORS[ci % 3]}">
-        <b>車${ci+1}<span style="font-weight:400;font-size:13px"> ・ ${people}人${single ? "" : ` ・ ${car.trips.length}便`}</span></b>
+        <span style="display:flex;align-items:baseline;gap:8px;min-width:0">
+          <b>車${ci+1}</b>
+          <input type="text" data-driver="${ci}" value="${esc(session.driverNames[ci] || "")}" placeholder="ドライバー名"
+            style="border:0;border-bottom:1px solid currentColor;background:transparent;color:inherit;font:inherit;
+              font-size:13px;padding:1px 2px;width:7em;min-width:0">
+          <span style="font-weight:400;font-size:13px;white-space:nowrap"> ・ ${people}人${single ? "" : ` ・ ${car.trips.length}便`}</span>
+        </span>
         <span class="tm">${single
           ? `降車完了 ${fmtMin(solo.dropoffSec)}　/　${esc(oName)}へ戻ると ${fmtMin(solo.returnSec)}`
           : `合計 ${fmtMin(per[ci])}`}</span>
@@ -1163,7 +1203,8 @@ function planToText(ci){
   const car = plan.cars[ci];
   const backToOrigin = db.settings.objective === "return";
   const people = car.trips.reduce((a,t) => a + t.stops.reduce((x,s) => x + s.staffIds.length, 0), 0);
-  let out = `【車${ci+1}】${people}人`;
+  const driver = (session.driverNames[ci] || "").trim();
+  let out = `【車${ci+1}】${driver ? "ドライバー：" + driver + " / " : ""}${people}人`;
   if(car.trips.length > 1) out += ` / ${car.trips.length}便`;
   out += `\n`;
   car.trips.forEach((trip, ti) => {
@@ -1906,6 +1947,12 @@ $("#resultBox").addEventListener("change", e => {
   else to.stops.push(stop);
   renderResult();
 });
+$("#resultBox").addEventListener("input", e => {
+  const d = e.target.closest("[data-driver]");
+  if(!d) return;
+  session.driverNames[d.dataset.driver] = d.value;
+  saveSession();
+});
 
 /* マスタ */
 $("#addStaff").addEventListener("click", () => editStaff(null));
@@ -2014,6 +2061,7 @@ $("#resetBtn").addEventListener("click", () => {
   session.selected.clear();
   for(const k in session.choice) delete session.choice[k];
   session.plan = null;
+  session.driverNames = {};
   renderAll(); renderResult();
 });
 
