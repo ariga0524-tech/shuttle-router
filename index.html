@@ -239,11 +239,10 @@ dialog h3{margin:0 0 12px;font-size:15px}
   <section class="card">
     <h2>送迎場所</h2>
     <input type="search" id="locSearch" placeholder="場所名で絞り込み">
-    <table class="list" style="margin-top:10px"><thead><tr><th>場所</th><th>住所・座標</th><th class="act"></th></tr></thead>
+    <table class="list" style="margin-top:10px"><thead><tr><th>場所</th><th>住所</th><th class="act"></th></tr></thead>
       <tbody id="locTable"></tbody></table>
     <button class="btn wide primary" id="addLoc" style="margin-top:12px">＋ 場所を追加</button>
-    <p class="hint">場所は住所で検索して登録できます。ピンポイントで指定したいときは、
-      Googleマップで地点を右クリック →「座標をコピー」で出る座標を直接入力することもできます。</p>
+    <p class="hint">住所、または駅名・施設名などのキーワードで検索して登録します。</p>
   </section>
 </div>
 
@@ -1256,7 +1255,7 @@ function renderMasterLocs(){
     const isOrigin = l.id === db.settings.originId;
     return `<tr>
       <td><b>${esc(l.name)}</b>${isOrigin ? '<span class="badge on">出発地点</span>' : ""}</td>
-      <td style="font-size:12px;color:var(--sub)">${l.address ? esc(l.address) : `<span style="font-variant-numeric:tabular-nums">${l.lat.toFixed(4)}, ${l.lng.toFixed(4)}</span>`}</td>
+      <td style="font-size:12px;color:var(--sub)">${l.address ? esc(l.address) : "—"}</td>
       <td class="act">
         <button class="btn sm" data-edit-loc="${esc(l.id)}">編集</button>
         <button class="btn sm danger" data-del-loc="${esc(l.id)}">削除</button>
@@ -1388,40 +1387,28 @@ async function geocodeAddress(rawQuery){
 }
 
 function editLoc(id, afterCreate){
-  const l = id ? locById(id) : {name:"", lat:"", lng:"", address:""};
-  if(!l) return;
-  const coord = (l.lat === "" ? "" : `${l.lat}, ${l.lng}`);
+  const l = id ? locById(id) : null;
+  if(id && !l) return;
   let found = null;   // 検索で見つかった{lat,lng,address}。保存時はこれを優先する
 
   openDialog(id ? "場所を編集" : "場所を追加", `
-    <label class="fld"><span>場所の名前</span><input type="text" id="fLName" value="${esc(l.name)}" placeholder="例）中野坂上駅"></label>
-    <label class="fld"><span>住所で探す</span>
+    <label class="fld"><span>場所の名前</span><input type="text" id="fLName" value="${esc(l?.name || "")}" placeholder="例）中野坂上駅"></label>
+    <label class="fld"><span>住所またはキーワードで探す</span>
       <div class="row" style="gap:6px">
-        <input type="text" id="fAddr" value="${esc(l.address || "")}" style="flex:1"
+        <input type="text" id="fAddr" value="${esc(l?.address || "")}" style="flex:1"
           placeholder="例）東京都新宿区西新宿2-8-1 または 中野坂上駅">
         <button type="button" class="btn" id="fAddrGo" style="flex:0 0 auto">検索</button>
       </div>
     </label>
-    <div id="fAddrResult" class="hint" style="margin:-6px 0 12px"></div>
-    <details id="fManualDetails">
-      <summary style="cursor:pointer;font-size:12.5px;color:var(--sub)">
-        座標を直接入力する（Googleマップで右クリック→「座標をコピー」）</summary>
-      <label class="fld" style="margin-top:10px"><span>座標（緯度, 経度）</span>
-        <input type="text" id="fCoord" value="${esc(coord)}" placeholder="35.6976, 139.6836" inputmode="decimal"></label>
-    </details>`,
+    <div id="fAddrResult" class="hint" style="margin:-6px 0 12px">${l?.address ? "→ " + esc(l.address) : ""}</div>`,
     () => {
       const name = $("#fLName").value.trim();
       if(!name){ alert("場所の名前を入力してください"); return false; }
 
-      let lat, lng, address = found ? found.address : (l.address || "");
-      if(found){
-        lat = found.lat; lng = found.lng;
-      }else{
-        const m = $("#fCoord").value.trim().match(/^\s*(-?\d+(?:\.\d+)?)\s*[,\s]\s*(-?\d+(?:\.\d+)?)\s*$/);
-        if(!m){ alert("住所で検索するか、座標を「35.6976, 139.6836」の形式で入力してください"); return false; }
-        lat = parseFloat(m[1]); lng = parseFloat(m[2]);
-        if(Math.abs(lat) > 90 || Math.abs(lng) > 180){ alert("座標の範囲が不正です"); return false; }
-      }
+      let lat, lng, address;
+      if(found){ lat = found.lat; lng = found.lng; address = found.address; }
+      else if(l){ lat = l.lat; lng = l.lng; address = l.address; }   // 再検索しなければ既存のまま
+      else{ alert("住所またはキーワードで検索してください"); return false; }
 
       if(id){ const t = locById(id); t.name = name; t.lat = lat; t.lng = lng; t.address = address; }
       else {
@@ -1442,18 +1429,16 @@ function editLoc(id, afterCreate){
       if(!r){
         found = null;
         box.style.color = "var(--danger)";
-        box.textContent = "見つかりませんでした。もう少し詳しく入力するか、下の「座標を直接入力する」をお使いください。";
+        box.textContent = "見つかりませんでした。住所の書き方を変えるか、近くの駅名・施設名で試してください。";
       }else{
         found = r;
         box.style.color = "var(--ok)";
         box.textContent = "→ " + r.address;
-        const details = $("#fManualDetails");
-        if(details) details.open = false;
       }
     }catch(e){
       found = null;
       box.style.color = "var(--danger)";
-      box.textContent = "検索できませんでした（通信エラー）。下の「座標を直接入力する」をお使いください。";
+      box.textContent = "検索できませんでした（通信エラー）。もう一度お試しください。";
     }finally{
       btn.disabled = false;
     }
