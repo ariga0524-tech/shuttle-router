@@ -479,7 +479,7 @@ const SEED_LOCS = [
   ["musashikosugi","武蔵小杉駅",35.5766,139.6595],
   ["kawasaki","川崎駅",35.5308,139.6970],
   ["yokohama","横浜駅",35.4657,139.6220],
-].map(([id,name,lat,lng]) => ({id:"loc_"+id, name, lat, lng}));
+].map(([id,name,lat,lng]) => ({id:"loc_"+id, name, lat, lng, address:name}));
 
 const SEED_STAFF = [
   {id:"stf_a", name:"Aさん", locIds:["loc_nakanosakaue"]},
