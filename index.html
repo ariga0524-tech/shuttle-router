@@ -1013,6 +1013,8 @@ function planTimes(plan){
    画面
    ========================================================================== */
 const CAR_COLORS = ["var(--car1)","var(--car2)","var(--car3)"];
+/** ドライバー名を入れてあればそれを、無ければ「車1」のように呼ぶ */
+const carLabel = ci => (session.driverNames[ci] || "").trim() || `車${+ci+1}`;
 
 /** 名簿が入れ替わったとき、消えたスタッフ・場所を今日の選択から取り除く */
 function pruneSession(){
@@ -1115,7 +1117,7 @@ function renderResult(){
   const slotOptions = current => plan.cars.flatMap((c, ci) =>
     c.trips.map((_, ti) => {
       const v = ci + "-" + ti;
-      return `<option value="${v}" ${v === current ? "selected" : ""}>車${ci+1}${c.trips.length > 1 ? ` ${ti+1}便` : ""}</option>`;
+      return `<option value="${v}" ${v === current ? "selected" : ""}>${esc(carLabel(ci))}${c.trips.length > 1 ? ` ${ti+1}便` : ""}</option>`;
     })).join("");
   const slots = plan.cars.reduce((a,c) => a + c.trips.length, 0);
 
@@ -1128,10 +1130,9 @@ function renderResult(){
     html += `<div class="carcard">
       <div class="carhead" style="background:${CAR_COLORS[ci % 3]}">
         <span style="display:flex;align-items:baseline;gap:8px;min-width:0">
-          <b>車${ci+1}</b>
-          <input type="text" data-driver="${ci}" value="${esc(session.driverNames[ci] || "")}" placeholder="ドライバー名"
+          <input type="text" data-driver="${ci}" value="${esc(session.driverNames[ci] || "")}" placeholder="車${ci+1}のドライバー名"
             style="border:0;border-bottom:1px solid currentColor;background:transparent;color:inherit;font:inherit;
-              font-size:13px;padding:1px 2px;width:7em;min-width:0">
+              font-weight:700;font-size:15px;padding:1px 2px;width:8em;min-width:0">
           <span style="font-weight:400;font-size:13px;white-space:nowrap"> ・ ${people}人${single ? "" : ` ・ ${car.trips.length}便`}</span>
         </span>
         <span class="tm">${single
@@ -1210,8 +1211,7 @@ function planToText(ci){
   const car = plan.cars[ci];
   const backToOrigin = db.settings.objective === "return";
   const people = car.trips.reduce((a,t) => a + t.stops.reduce((x,s) => x + s.staffIds.length, 0), 0);
-  const driver = (session.driverNames[ci] || "").trim();
-  let out = `【車${ci+1}】${driver ? "ドライバー：" + driver + " / " : ""}${people}人`;
+  let out = `【${carLabel(ci)}】${people}人`;
   if(car.trips.length > 1) out += ` / ${car.trips.length}便`;
   out += `\n`;
   car.trips.forEach((trip, ti) => {
