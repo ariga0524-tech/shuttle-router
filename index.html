@@ -191,8 +191,9 @@ dialog h3{margin:0 0 12px;font-size:15px}
 <div id="tab-plan">
   <section class="card">
     <h2><span class="step-no">1</span>今日の条件</h2>
-    <div class="row">
-      <label class="fld"><span>出発地点</span><select id="originSel"></select></label>
+    <label class="fld"><span>出発地点</span><select id="originSel"></select></label>
+
+    <div id="carSegWrap">
       <label class="fld"><span>使う車の台数</span>
         <div class="seg" id="carSeg">
           <button data-n="1" aria-pressed="true">1台</button>
@@ -201,6 +202,12 @@ dialog h3{margin:0 0 12px;font-size:15px}
         </div>
       </label>
     </div>
+
+    <div class="hidden" id="driverPickWrap">
+      <label class="fld" style="margin-bottom:6px"><span>今日のドライバー（チェックした人数がそのまま車の台数になります）</span></label>
+      <div class="pickgrid" id="driverGrid"></div>
+    </div>
+
     <div class="hint">1台につき最大 <b id="capLabel">4</b> 人まで（運転手を除く）。</div>
   </section>
 
@@ -243,6 +250,15 @@ dialog h3{margin:0 0 12px;font-size:15px}
       <tbody id="locTable"></tbody></table>
     <button class="btn wide primary" id="addLoc" style="margin-top:12px">＋ 場所を追加</button>
     <p class="hint">住所、または駅名・施設名などのキーワードで検索して登録します。</p>
+  </section>
+
+  <section class="card">
+    <h2>ドライバー</h2>
+    <table class="list"><thead><tr><th>名前</th><th class="act"></th></tr></thead>
+      <tbody id="driverTable"></tbody></table>
+    <p class="empty hidden" id="driverTableEmpty">まだ登録がありません</p>
+    <button class="btn wide primary" id="addDriver" style="margin-top:12px">＋ ドライバーを追加</button>
+    <p class="hint">登録しておくと、「今日の条件」でチェックするだけで車の台数とドライバー名が決まります。登録しなければ、これまでどおり台数を直接選べます。</p>
   </section>
 </div>
 
@@ -496,7 +512,7 @@ const DEFAULT_SETTINGS = {
 
 function freshDB(){
   return {locs:SEED_LOCS.map(o=>({...o})), staff:SEED_STAFF.map(o=>({...o,locIds:[...o.locIds]})),
-          settings:{...DEFAULT_SETTINGS}, matrix:{}, matrixAt:null};
+          drivers:[], settings:{...DEFAULT_SETTINGS}, matrix:{}, matrixAt:null};
 }
 
 /* ---- 状態 -------------------------------------------------------------- */
@@ -528,12 +544,14 @@ function saveSession(){
       choice: session.choice,
       plan: session.plan,
       driverNames: session.driverNames,
+      driverPick: [...session.driverPick],
     }));
   }catch(e){ /* 保存できなくても今日の操作自体は続けられる */ }
 }
 
-/** selected=出勤者ID / choice={staffId:locId} / driverNames={車の番号:ドライバー名} */
-const session = {selected:new Set(), choice:{}, plan:null, driverNames:{}};
+/** selected=出勤者ID / choice={staffId:locId} / driverNames={車の番号:ドライバー名}
+ *  driverPick=今日チェックしたドライバーのID（登録制で使うとき） */
+const session = {selected:new Set(), choice:{}, plan:null, driverNames:{}, driverPick:new Set()};
 (() => {
   const saved = loadSession();
   if(!saved) return;
@@ -541,6 +559,7 @@ const session = {selected:new Set(), choice:{}, plan:null, driverNames:{}};
   session.choice = saved.choice || {};
   session.plan = saved.plan || null;
   session.driverNames = saved.driverNames || {};
+  session.driverPick = new Set(saved.driverPick || []);
 })();
 
 /** 保存されているのが暗号化データなら、その中身を返す（旧形式 enc:1 も含む） */
@@ -567,6 +586,7 @@ function load(){
     return {
       locs,
       staff: Array.isArray(d.staff) ? d.staff : base.staff,
+      drivers: Array.isArray(d.drivers) ? d.drivers : base.drivers,
       settings: {...DEFAULT_SETTINGS, ...(d.settings||{})},
       matrix: (d.matrix && typeof d.matrix === "object") ? d.matrix : {},
       matrixAt: d.matrixAt || null,
@@ -1022,15 +1042,19 @@ function pruneSession(){
     if(!staffById(id)){ session.selected.delete(id); delete session.choice[id]; }
   for(const k of Object.keys(session.choice))
     if(!locById(session.choice[k])) delete session.choice[k];
+  for(const id of [...session.driverPick])
+    if(!db.drivers.find(d => d.id === id)) session.driverPick.delete(id);
   if(session.plan) session.plan = null;
 }
 
 function renderAll(){
   renderConditions();
+  renderDriverPicker();
   renderStaffPicker();
   renderAssign();
   renderMasterStaff();
   renderMasterLocs();
+  renderMasterDrivers();
   renderSettings();
   renderBar();
 }
@@ -1041,8 +1065,21 @@ function renderConditions(){
   sel.innerHTML = db.locs.map(l => `<option value="${esc(l.id)}">${esc(l.name)}</option>`).join("");
   if(!locById(db.settings.originId) && db.locs.length) db.settings.originId = db.locs[0].id;
   sel.value = db.settings.originId;
+  const useDrivers = db.drivers.length > 0;
+  $("#carSegWrap").classList.toggle("hidden", useDrivers);
+  $("#driverPickWrap").classList.toggle("hidden", !useDrivers);
   $$("#carSeg button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.n === db.settings.cars)));
   $("#capLabel").textContent = db.settings.capacity;
+}
+
+/** 登録制ドライバーのチェックリスト（今日の条件）*/
+function renderDriverPicker(){
+  $("#driverGrid").innerHTML = db.drivers.map(d => {
+    const on = session.driverPick.has(d.id);
+    return `<label class="pick" data-on="${on?1:0}">
+      <input type="checkbox" data-driver-pick="${esc(d.id)}" ${on?"checked":""}>
+      <span class="nm">${esc(d.name)}</span></label>`;
+  }).join("");
 }
 
 /* ---- ステップ2：出勤者 --------------------------------------------------- */
@@ -1091,12 +1128,13 @@ function renderAssign(){
 function renderBar(){
   saveSession();
   const n = session.selected.size;
-  const ready = n > 0 && [...session.selected].every(id => session.choice[id]);
+  const driverOk = db.drivers.length === 0 || session.driverPick.size > 0;
+  const ready = n > 0 && driverOk && [...session.selected].every(id => session.choice[id]);
   $("#bar").classList.toggle("hidden", n === 0 || $("#tab-plan").classList.contains("hidden"));
   $("#barCnt").textContent = `${n}人 / ${db.settings.cars}台`;
   const btn = $("#buildBtn");
   btn.disabled = !ready;
-  btn.textContent = ready ? "順路を作成" : "送迎場所を選んでください";
+  btn.textContent = !driverOk ? "ドライバーを選んでください" : ready ? "順路を作成" : "送迎場所を選んでください";
 }
 
 /* ---- ステップ4：順路 ----------------------------------------------------- */
@@ -1314,6 +1352,32 @@ function renderMasterLocs(){
         <button class="btn sm danger" data-del-loc="${esc(l.id)}">削除</button>
       </td></tr>`;
   }).join("");
+}
+
+function renderMasterDrivers(){
+  const tb = $("#driverTable");
+  $("#driverTableEmpty").classList.toggle("hidden", db.drivers.length > 0);
+  tb.innerHTML = db.drivers.map((d,i) => `<tr>
+    <td><b>${esc(d.name)}</b></td>
+    <td class="act">
+      <button class="btn sm" data-mv-driver="up" data-idx="${i}" title="上へ" ${i===0?"disabled":""}>↑</button>
+      <button class="btn sm" data-mv-driver="down" data-idx="${i}" title="下へ" ${i===db.drivers.length-1?"disabled":""}>↓</button>
+      <button class="btn sm" data-edit-driver="${esc(d.id)}">編集</button>
+      <button class="btn sm danger" data-del-driver="${esc(d.id)}">削除</button>
+    </td></tr>`).join("");
+}
+function editDriver(id){
+  const d = id ? db.drivers.find(x => x.id === id) : null;
+  if(id && !d) return;
+  openDialog(id ? "ドライバーを編集" : "ドライバーを追加",
+    `<label class="fld"><span>名前</span><input type="text" id="fDriverName" value="${esc(d?.name || "")}" placeholder="例）鈴木"></label>`,
+    () => {
+      const name = $("#fDriverName").value.trim();
+      if(!name){ alert("名前を入力してください"); return false; }
+      if(id) d.name = name;
+      else db.drivers.push({id:uid("drv"), name});
+      save(); renderAll(); renderBar();
+    });
 }
 
 /* ---- 設定画面 ------------------------------------------------------------ */
@@ -1830,6 +1894,17 @@ $("#carSeg").addEventListener("click", e => {
   const b = e.target.closest("button[data-n]"); if(!b) return;
   db.settings.cars = +b.dataset.n; save(); renderConditions(); renderBar();
 });
+$("#driverGrid").addEventListener("change", e => {
+  const cb = e.target.closest("input[data-driver-pick]"); if(!cb) return;
+  if(cb.checked) session.driverPick.add(cb.dataset.driverPick);
+  else session.driverPick.delete(cb.dataset.driverPick);
+  // チェックした順ではなく、登録されている並び順で車1・車2…に割り当てる
+  const names = db.drivers.filter(d => session.driverPick.has(d.id)).map(d => d.name);
+  names.forEach((name, i) => { session.driverNames[i] = name; });
+  Object.keys(session.driverNames).forEach(k => { if(+k >= names.length) delete session.driverNames[k]; });
+  db.settings.cars = Math.max(1, names.length);
+  save(); renderConditions(); renderDriverPicker(); renderBar();
+});
 
 /* ステップ2 */
 $("#staffSearch").addEventListener("input", renderStaffPicker);
@@ -2008,6 +2083,28 @@ $("#locTable").addEventListener("click", e => {
   }
 });
 
+$("#addDriver").addEventListener("click", () => editDriver(null));
+$("#driverTable").addEventListener("click", e => {
+  const mv = e.target.closest("[data-mv-driver]");
+  if(mv){
+    const i = +mv.dataset.idx, j = mv.dataset.mvDriver === "up" ? i - 1 : i + 1;
+    if(j < 0 || j >= db.drivers.length) return;
+    [db.drivers[i], db.drivers[j]] = [db.drivers[j], db.drivers[i]];
+    save(); renderAll();
+    return;
+  }
+  const ed = e.target.closest("[data-edit-driver]");
+  if(ed) return editDriver(ed.dataset.editDriver);
+  const del = e.target.closest("[data-del-driver]");
+  if(del){
+    const d = db.drivers.find(x => x.id === del.dataset.delDriver);
+    if(!d || !confirm(`${d.name} を削除しますか？`)) return;
+    db.drivers = db.drivers.filter(x => x.id !== d.id);
+    session.driverPick.delete(d.id);
+    save(); renderAll(); renderBar();
+  }
+});
+
 /* 設定 */
 const bindNum = (sel, field, min, max, fallback) => {
   $(sel).addEventListener("change", e => {
@@ -2059,6 +2156,7 @@ $("#importBtn").addEventListener("click", () => {
   session.selected.clear();
   for(const k in session.choice) delete session.choice[k];
   session.plan = null;
+  session.driverPick.clear();
   renderAll(); renderResult();
   toast("読み込みました");
 });
@@ -2069,6 +2167,7 @@ $("#resetBtn").addEventListener("click", () => {
   for(const k in session.choice) delete session.choice[k];
   session.plan = null;
   session.driverNames = {};
+  session.driverPick = new Set();
   renderAll(); renderResult();
 });
 
@@ -2114,7 +2213,7 @@ async function decodePayload(str){
 function transferData(withMatrix){
   const {apiKey, ...rest} = db.settings;
   const settings = dataKey ? {...rest, apiKey} : rest;
-  const d = {locs:db.locs, staff:db.staff, settings};
+  const d = {locs:db.locs, staff:db.staff, drivers:db.drivers, settings};
   if(withMatrix && Object.keys(db.matrix).length){ d.matrix = db.matrix; d.matrixAt = db.matrixAt; }
   return d;
 }
@@ -2317,6 +2416,7 @@ async function unlockWith(secret){
   db = {
     locs: Array.isArray(d.locs) && d.locs.length ? d.locs : freshDB().locs,
     staff: Array.isArray(d.staff) ? d.staff : [],
+    drivers: Array.isArray(d.drivers) ? d.drivers : [],
     settings: {...DEFAULT_SETTINGS, ...(d.settings || {})},
     matrix: (d.matrix && typeof d.matrix === "object") ? d.matrix : {},
     matrixAt: d.matrixAt || null,
@@ -2663,6 +2763,7 @@ async function pullShared(){
   db = {
     locs: Array.isArray(d.locs) && d.locs.length ? d.locs : db.locs,
     staff: Array.isArray(d.staff) ? d.staff : db.staff,
+    drivers: Array.isArray(d.drivers) ? d.drivers : db.drivers,
     settings: {...DEFAULT_SETTINGS, ...(d.settings || {})},
     matrix: (d.matrix && typeof d.matrix === "object") ? d.matrix : {},
     matrixAt: d.matrixAt || null,
@@ -2732,6 +2833,7 @@ async function adoptRemote(vault, updatedAt){
     db = {
       locs: Array.isArray(d.locs) && d.locs.length ? d.locs : freshDB().locs,
       staff: Array.isArray(d.staff) ? d.staff : [],
+      drivers: Array.isArray(d.drivers) ? d.drivers : [],
       settings: {...DEFAULT_SETTINGS, ...(d.settings || {})},
       matrix: (d.matrix && typeof d.matrix === "object") ? d.matrix : {},
       matrixAt: d.matrixAt || null,
