@@ -1243,10 +1243,12 @@ function toast(msg){
 function renderMasterStaff(){
   const tb = $("#staffTable");
   $("#staffTableEmpty").classList.toggle("hidden", db.staff.length > 0);
-  tb.innerHTML = db.staff.map(s => `<tr>
-    <td><b>${esc(s.name)}</b></td>
+  tb.innerHTML = db.staff.map((s,i) => `<tr>
+    <td>${s.no ? `<span style="font-size:11px;color:var(--sub)">${esc(s.no)}</span><br>` : ""}<b>${esc(s.name)}</b></td>
     <td>${s.locIds.length ? esc(s.locIds.map(locName).join(" / ")) : '<span style="color:var(--sub)">未設定</span>'}</td>
     <td class="act">
+      <button class="btn sm" data-mv-staff="up" data-idx="${i}" title="上へ" ${i===0?"disabled":""}>↑</button>
+      <button class="btn sm" data-mv-staff="down" data-idx="${i}" title="下へ" ${i===db.staff.length-1?"disabled":""}>↓</button>
       <button class="btn sm" data-edit-staff="${esc(s.id)}">編集</button>
       <button class="btn sm danger" data-del-staff="${esc(s.id)}">削除</button>
     </td></tr>`).join("");
@@ -1314,23 +1316,146 @@ $("#dlg").addEventListener("close", () => {
 function locOptions(selected){
   return db.locs.map(l => `<option value="${esc(l.id)}" ${l.id===selected?"selected":""}>${esc(l.name)}</option>`).join("");
 }
+/**
+ * スタッフの送迎先は、場所マスタから選ぶ（駅など共有の場所）か、ここでその場で
+ * 住所を検索して直接登録するか、どちらでもいい。多くのスタッフは自宅1つだけ
+ * なので、わざわざ先に「スタッフ・場所」の場所タブで登録してから選び直す、
+ * という2度手間をなくすための統合フォーム。
+ */
 function editStaff(id){
-  const s = id ? staffById(id) : {name:"", locIds:[]};
+  const s = id ? staffById(id) : {name:"", no:"", locIds:[]};
   if(!s) return;
+
+  const makeCand = locId => {
+    const l = locId ? locById(locId) : null;
+    return l ? {locId, lat:l.lat, lng:l.lng, address:l.address || l.name} : {locId:null, lat:null, lng:null, address:""};
+  };
+  const cand = [makeCand(s.locIds[0]), makeCand(s.locIds[1])];
+  const queried = [cand[0].address, cand[1].address];   // 直近に検索・確定した文字列
+
+  const field = i => `
+    <label class="fld"><span>送迎先の住所${i===0 ? "（第1候補）" : "（第2候補・任意）"}</span>
+      <div class="row" style="gap:6px">
+        <input type="text" id="fAddr${i}" value="${esc(cand[i].address)}" style="flex:1"
+          placeholder="住所・駅名・施設名で検索">
+        <button type="button" class="btn" id="fAddr${i}Go" style="flex:0 0 auto">検索</button>
+      </div>
+      ${i===0 && !db.settings.apiKey ? '<p class="hint" style="margin:5px 0 0">無料検索（国土地理院・OpenStreetMap）を使っています。ごくまれに見つからない場合は、近くの駅名・施設名でもお試しください。</p>' : ""}
+    </label>
+    <div id="fAddr${i}Result" class="hint" style="margin:-6px 0 6px">${cand[i].address ? "→ " + esc(cand[i].address) : ""}</div>
+    <details style="margin:-4px 0 14px">
+      <summary style="cursor:pointer;font-size:12px;color:var(--sub)">登録済みの場所から選ぶ（駅など）</summary>
+      <select id="fPick${i}" style="margin-top:6px">
+        <option value="">（上の住所をそのまま使う）</option>${locOptions(cand[i].locId)}
+      </select>
+    </details>`;
+
   openDialog(id ? "スタッフを編集" : "スタッフを追加", `
     <label class="fld"><span>名前</span><input type="text" id="fName" value="${esc(s.name)}" placeholder="例）山田 太郎"></label>
-    <label class="fld"><span>送迎場所の第1候補</span><select id="fLoc1"><option value="">（未設定）</option>${locOptions(s.locIds[0])}</select></label>
-    <label class="fld"><span>送迎場所の第2候補（任意）</span><select id="fLoc2"><option value="">（なし）</option>${locOptions(s.locIds[1])}</select></label>
-    <p class="hint">ここに無い場所を当日指定されたときは、順路作成の画面で「その他」から選べます。</p>`,
+    <label class="fld"><span>社員番号（任意）</span><input type="text" id="fNo" value="${esc(s.no || "")}" placeholder="例）1234"></label>
+    ${field(0)}
+    ${field(1)}
+    <p class="hint">当日だけ別の場所に送る場合は、順路作成の画面の「その他」から指定できます。</p>`,
     () => {
       const name = $("#fName").value.trim();
       if(!name){ alert("名前を入力してください"); return false; }
-      const l1 = $("#fLoc1").value, l2 = $("#fLoc2").value;
-      const locIds = [l1, l2].filter((v,i,a) => v && a.indexOf(v) === i);
-      if(id){ const t = staffById(id); t.name = name; t.locIds = locIds; }
-      else db.staff.push({id:uid("stf"), name, locIds});
+      const no = $("#fNo").value.trim();
+
+      const locIds = [];
+      for(let i=0;i<2;i++){
+        const q = $(`#fAddr${i}`).value.trim();
+        if(!q) continue;                         // 空欄なら候補なし
+        if(cand[i].locId){ locIds.push(cand[i].locId); continue; }
+        // 新しい住所：場所マスタにも登録しておく（名前は住所そのまま＝別途名前を付ける必要はない）
+        const created = {id:uid("loc"), name:cand[i].address, lat:cand[i].lat, lng:cand[i].lng, address:cand[i].address};
+        db.locs.push(created);
+        locIds.push(created.id);
+      }
+      const uniq = locIds.filter((v,i,a) => a.indexOf(v) === i);
+
+      if(id){ const t = staffById(id); t.name = name; t.no = no; t.locIds = uniq; }
+      else db.staff.push({id:uid("stf"), name, no, locIds:uniq});
       save(); renderAll(); renderResult();
     });
+
+  const wireSlot = i => {
+    const go = async () => {
+      const q = $(`#fAddr${i}`).value.trim();
+      const box = $(`#fAddr${i}Result`), btn = $(`#fAddr${i}Go`);
+      if(!q){
+        box.textContent = ""; cand[i] = {locId:null, lat:null, lng:null, address:""}; queried[i] = "";
+        $(`#fPick${i}`).value = "";
+        return;
+      }
+      btn.disabled = true; box.style.color = "var(--sub)"; box.textContent = "検索中…";
+      try{
+        const r = await geocodeAddress(q);
+        if(!r){
+          cand[i] = {locId:null, lat:null, lng:null, address:""}; queried[i] = "";
+          box.style.color = "var(--danger)";
+          box.textContent = db.settings.apiKey
+            ? "見つかりませんでした。住所の書き方を変えるか、近くの駅名・施設名で試してください。"
+            : "見つかりませんでした。無料の検索では個別の番地まで見つからないことがあります。"
+              + "住所の書き方を変えるか、近くの駅名・施設名で試してください"
+              + "（より正確に探すには、管理画面でGoogleとの連携を設定してください）。";
+        }else{
+          cand[i] = {locId:null, lat:r.lat, lng:r.lng, address:r.address};
+          queried[i] = q;
+          $(`#fPick${i}`).value = "";
+          box.style.color = "var(--ok)";
+          box.textContent = "→ " + r.address;
+        }
+      }catch(e){
+        box.style.color = "var(--danger)";
+        box.textContent = "検索できませんでした（通信エラー）。もう一度お試しください。";
+      }finally{
+        btn.disabled = false;
+      }
+    };
+    $(`#fAddr${i}Go`).addEventListener("click", go);
+    $(`#fAddr${i}`).addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); go(); } });
+    $(`#fPick${i}`).addEventListener("change", e => {
+      const lid = e.target.value;
+      if(!lid) return;
+      const l = locById(lid);
+      cand[i] = {locId:lid, lat:l.lat, lng:l.lng, address:l.address || l.name};
+      queried[i] = cand[i].address;
+      $(`#fAddr${i}`).value = cand[i].address;
+      const box = $(`#fAddr${i}Result`);
+      box.style.color = "var(--ok)";
+      box.textContent = "→ " + cand[i].address;
+    });
+    return go;
+  };
+  const goFns = [wireSlot(0), wireSlot(1)];
+
+  // 保存を押した時点で、まだ検索していない／書き換えた住所が残っていれば先に検索する
+  // （#dlgOk は他の種類のダイアログとも共有する固定要素なので、リスナーは
+  //  このダイアログが閉じた時点で必ず外す）
+  const okBtn = $("#dlgOk");
+  const freshOkBtn = okBtn.cloneNode(true);
+  okBtn.replaceWith(freshOkBtn);
+  const onSaveClick = async e => {
+    const pending = [0,1].filter(i => {
+      const q = $(`#fAddr${i}`).value.trim();
+      return q && q !== queried[i];
+    });
+    if(!pending.length) return;
+    e.preventDefault();
+    const btn = $("#dlgOk"), label = btn.textContent;
+    btn.disabled = true; btn.textContent = "確認中…";
+    for(const i of pending) await goFns[i]();
+    btn.disabled = false; btn.textContent = label;
+    const stillPending = [0,1].some(i => {
+      const q = $(`#fAddr${i}`).value.trim();
+      return q && q !== queried[i];
+    });
+    if(!stillPending) $("#dlg").close("ok");
+  };
+  freshOkBtn.addEventListener("click", onSaveClick);
+  $("#dlg").addEventListener("close", () => {
+    freshOkBtn.removeEventListener("click", onSaveClick);
+  }, {once:true});
 }
 /**
  * よくある表記ゆれを吸収する。IMEで住所を打つと全角の数字やダッシュが混ざりやすく、
@@ -1785,6 +1910,14 @@ $("#resultBox").addEventListener("change", e => {
 /* マスタ */
 $("#addStaff").addEventListener("click", () => editStaff(null));
 $("#staffTable").addEventListener("click", e => {
+  const mv = e.target.closest("[data-mv-staff]");
+  if(mv){
+    const i = +mv.dataset.idx, j = mv.dataset.mvStaff === "up" ? i - 1 : i + 1;
+    if(j < 0 || j >= db.staff.length) return;
+    [db.staff[i], db.staff[j]] = [db.staff[j], db.staff[i]];
+    save(); renderAll();
+    return;
+  }
   const ed = e.target.closest("[data-edit-staff]");
   if(ed) return editStaff(ed.dataset.editStaff);
   const del = e.target.closest("[data-del-staff]");
