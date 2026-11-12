@@ -480,6 +480,7 @@ const SEED_LOCS = [
   ["kawasaki","川崎駅",35.5308,139.6970],
   ["yokohama","横浜駅",35.4657,139.6220],
 ].map(([id,name,lat,lng]) => ({id:"loc_"+id, name, lat, lng, address:name}));
+const SEED_LOC_ADDR = Object.fromEntries(SEED_LOCS.map(l => [l.id, l.address]));
 
 const SEED_STAFF = [
   {id:"stf_a", name:"Aさん", locIds:["loc_nakanosakaue"]},
@@ -522,8 +523,10 @@ function load(){
     const d = JSON.parse(raw);
     if(d && d.enc) return freshDB();         // 復号前。解錠後に読み直す
     const base = freshDB();
+    const locs = (Array.isArray(d.locs) && d.locs.length ? d.locs : base.locs)
+      .map(l => (!l.address && SEED_LOC_ADDR[l.id]) ? {...l, address: SEED_LOC_ADDR[l.id]} : l);
     return {
-      locs: Array.isArray(d.locs) && d.locs.length ? d.locs : base.locs,
+      locs,
       staff: Array.isArray(d.staff) ? d.staff : base.staff,
       settings: {...DEFAULT_SETTINGS, ...(d.settings||{})},
       matrix: (d.matrix && typeof d.matrix === "object") ? d.matrix : {},
