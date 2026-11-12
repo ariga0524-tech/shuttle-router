@@ -1244,38 +1244,34 @@ const carAt = (plan, slot) => {
   return plan.cars[ci] && plan.cars[ci].trips[ti] ? plan.cars[ci].trips[ti] : null;
 };
 
-function planToText(ci){
-  const plan = session.plan, originId = plan.originId, oName = locName(originId);
-  const car = plan.cars[ci];
-  const backToOrigin = db.settings.objective === "return";
-  const people = car.trips.reduce((a,t) => a + t.stops.reduce((x,s) => x + s.staffIds.length, 0), 0);
-  let out = `【${carLabel(ci)}】${people}人`;
-  if(car.trips.length > 1) out += ` / ${car.trips.length}便`;
-  out += `\n`;
-  car.trips.forEach((trip, ti) => {
-    const ev = evalRoute(originId, trip.stops);
-    const last = ti === car.trips.length - 1;
-    if(car.trips.length > 1) out += `\n［${ti+1}便］\n`;
-    out += `${oName} 発\n`;
-    trip.stops.forEach((st, si) => {
-      out += `  ↓ ${fmtMin(ev.legs[si].driveSec)}\n`;
-      out += `${locName(st.locId)}　${st.staffIds.map(id => staffById(id)?.name ?? "?").join("・")}\n`;
+/** 日付の見出し（例：11月11日）。朝5時までは前日扱いにして、業務日の境目を揃える */
+function dateLabel(d = new Date()){
+  const shifted = new Date(d.getTime() - DAY_START_HOUR * 3600 * 1000);
+  return `${shifted.getMonth()+1}月${shifted.getDate()}日`;
+}
+/** 送る相手（ドライバー）にとって必要な最低限：誰を・どこに、だけに絞った一覧 */
+function carText(ci){
+  const car = session.plan.cars[ci];
+  const lines = [carLabel(ci)];
+  car.trips.forEach(trip => {
+    trip.stops.forEach(st => {
+      const l = locById(st.locId);
+      const addr = l ? (l.address || l.name) : "?";
+      st.staffIds.forEach(sid => {
+        const s = staffById(sid);
+        lines.push(`${s?.no || ""}\t${s?.name ?? "?"}\t${addr}`);
+      });
     });
-    if(!last || backToOrigin) out += `  ↓ ${fmtMin(ev.backSec)}\n${oName} 着\n`;
   });
-  if(car.trips.length === 1){
-    const e = evalRoute(originId, car.trips[0].stops);
-    out += `\n降車完了まで ${fmtMin(e.dropoffSec)} / ${oName}へ戻ると ${fmtMin(e.returnSec)}`;
-  }else{
-    out += `\nこの車の合計 ${fmtMin(planTimes(plan).per[ci])}（${car.trips.length}便）`;
-  }
-  return out;
+  return lines.join("\n");
+}
+function planToText(ci){
+  return `${dateLabel()}\n${carText(ci)}`;
 }
 function allPlanText(){
   const plan = session.plan;
-  const parts = plan.cars.map((c, ci) => c.trips.some(t => t.stops.length) ? planToText(ci) : null).filter(Boolean);
-  if(plan.cars.length > 1) parts.push(`全体 ${fmtMin(planTimes(plan).total)}（いちばん遅く終わる車）`);
-  return parts.join("\n\n");
+  const parts = plan.cars.map((c, ci) => c.trips.some(t => t.stops.length) ? carText(ci) : null).filter(Boolean);
+  return `${dateLabel()}\n\n${parts.join("\n\n")}`;
 }
 function gmapUrl(ci, ti){
   const plan = session.plan, originId = plan.originId;
