@@ -2,6 +2,8 @@
 
 スタッフを車で送るときの順路を決めるアプリ。
 
+**公開URL：** https://ariga0524-tech.github.io/shuttle-router/
+
 URLを開くだけで使えます。ホーム画面に追加しておくとアプリのように起動できます。
 `index.html` をダウンロードしてダブルクリックすれば、ネットに繋がっていなくても同じように動きます。
 
@@ -218,10 +220,9 @@ Firebase の無料枠は 1日あたり読み取り5万回・書き込み2万回�
 
 ## ファイル構成
 
-- `index.html` — 本体。これ1枚で完結している
-- `artifact.html` — Artifact公開用。`index.html` から自動生成されるので直接編集しない
-- `build-artifact.js` — `index.html` → `artifact.html` の変換。`node build-artifact.js` で実行
-- `deploy/pages.yml` — 公開リポジトリ側に置く GitHub Pages のデプロイ設定
+- `index.html` — 本体。これ1枚で完結している。GitHub Pages が直接このファイルを公開する
+- `guide.html` — 担当者向けの使い方ガイド（1ページ）
+- `.github/workflows/pages.yml` — push すると自動で GitHub Pages に反映するデプロイ設定
 
 ## 順路の決め方
 
