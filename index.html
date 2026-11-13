@@ -2792,14 +2792,19 @@ async function pullShared(){
 }
 
 /** 手元の内容を預ける。他の人が先に更新していたら確認する */
+/**
+ * 自動の同期では、担当者に判断させるような確認は絶対に出さない。
+ * 競合（他の端末の更新の方が新しい）を検出した場合は、黙って今回の送信を
+ * 見送るだけにする。確認ダイアログで「OK/キャンセル」の意味も分からないまま
+ * 押させて、うっかり上書き・消失させてしまう事故を防ぐため。
+ * 次に何か保存したときにまた試すので、いずれ解消される。
+ */
 async function pushShared(){
   if(!shareCfg || !dataKey) return;
   const remote = await shareFetch();
   if(remote && remote.updatedAt > lastSeenRemoteAt){
-    const take = confirm("ほかの担当者がこの間に名簿を更新しています。\n"
-      + "「OK」でそちらを取り込みます（この端末の変更は失われます）。\n"
-      + "「キャンセル」でこの端末の内容を反映します。");
-    if(take){ lastSeenRemoteAt = 0; await pullShared(); return; }
+    setShareStatus("ほかの端末の更新が新しいため、今回の送信は見送りました（次の保存でまた試します）。", "err");
+    return;
   }
   const now = Date.now();
   lastEnvelope = await sealDb();
