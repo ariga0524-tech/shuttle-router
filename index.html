@@ -296,18 +296,18 @@ dialog h3{margin:0 0 12px;font-size:15px}
     <datalist id="knownStores"></datalist>
     <p class="lockerr hidden" id="storeErr"></p>
 
-    <form id="storeOpenForm">
-      <label class="fld"><span>パスワード</span>
-        <input type="password" id="storeOpenPw" autocomplete="current-password"></label>
-      <button class="btn primary wide" type="submit" id="storeOpenGo">このお店を開く</button>
-    </form>
-    <p class="hint" style="text-align:center;margin:14px 0">はじめて使うお店はこちら</p>
     <form id="storeNewForm">
       <label class="fld"><span>新しいパスワード（8文字以上）</span>
         <input type="password" id="storeNewPw1" autocomplete="new-password"></label>
       <label class="fld"><span>確認のためもう一度</span>
         <input type="password" id="storeNewPw2" autocomplete="new-password"></label>
-      <button class="btn wide" type="submit" id="storeNewGo">新しいお店として登録する</button>
+      <button class="btn primary wide" type="submit" id="storeNewGo">新しいお店として登録する</button>
+    </form>
+    <p class="hint" style="text-align:center;margin:14px 0">すでに使っているお店はこちら</p>
+    <form id="storeOpenForm">
+      <label class="fld"><span>パスワード</span>
+        <input type="password" id="storeOpenPw" autocomplete="current-password"></label>
+      <button class="btn wide" type="submit" id="storeOpenGo">このお店を開く</button>
     </form>
   </div>
 </div>
