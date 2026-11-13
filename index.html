@@ -496,25 +496,15 @@ service cloud.firestore {
 /* ---- 店舗（マルチテナント） ---------------------------------------------
    店舗名が「部屋」を選ぶID。店舗ごとに名簿・場所・ドライバー・設定が
    完全に独立する（お互いのデータは一切見えない）。
-   この仕組みができる前から使っている端末には、何も聞かずに今まで
-   通りの保存場所（store="default"）を割り当て、一切ズレが起きないようにする。
+   店舗名を選んでいない端末は、必ず店舗選択画面を通る（新規登録／既存の
+   店舗を開く）。例外は無い。
    ========================================================================== */
 const STORE_KEY = "shuttle-router.store";
-const LEGACY_KEY = "shuttle-router.v1";
 function readStoreSlug(){
-  try{
-    const explicit = localStorage.getItem(STORE_KEY);
-    if(explicit) return explicit;
-    if(localStorage.getItem(LEGACY_KEY) !== null){
-      localStorage.setItem(STORE_KEY, "default");
-      return "default";
-    }
-  }catch(e){ /* 読めなければ未選択のまま */ }
-  return null;
+  try{ return localStorage.getItem(STORE_KEY) || null; }catch(e){ return null; }
 }
 const storeSlug = readStoreSlug();
-const KEY = storeSlug === "default" ? LEGACY_KEY
-  : storeSlug ? `shuttle-router.v1.${storeSlug}` : "shuttle-router.v1.__pending__";
+const KEY = storeSlug ? `shuttle-router.v1.${storeSlug}` : "shuttle-router.v1.__pending__";
 
 /* ---- 初期データ ------------------------------------------------------- */
 const SEED_LOCS = [
@@ -566,8 +556,7 @@ function freshDB(){
 let db = load();
 
 /* ---- 今日の入力（タブを閉じても同じ日のうちは残す） ---------------------- */
-const SESSION_KEY = storeSlug === "default" ? "shuttle-router.session.v1"
-  : storeSlug ? `shuttle-router.session.v1.${storeSlug}` : "shuttle-router.session.v1.__pending__";
+const SESSION_KEY = storeSlug ? `shuttle-router.session.v1.${storeSlug}` : "shuttle-router.session.v1.__pending__";
 const DAY_START_HOUR = 5;   // 日付の切り替わりは深夜0時ではなく朝5時。4:59までは前日扱い
 /** 「業務日」を YYYY-MM-DD で返す。端末のローカル時刻を使う（UTCに変換しない）*/
 function businessDateStr(d = new Date()){
@@ -2792,8 +2781,7 @@ if($("#storePick")){
    Firebase の設定値は公開前提のもので、秘密ではない。
    ========================================================================== */
 const SHARE_KEY = "shuttle-router.share";
-const SHARE_DOC = storeSlug === "default" ? "shuttle/roster"
-  : storeSlug ? `shuttle/${storeSlug}` : "shuttle/__pending__";
+const SHARE_DOC = storeSlug ? `shuttle/${storeSlug}` : "shuttle/__pending__";
 /**
  * あらかじめ用意しておいた共有先（Firebase）。apiKeyとprojectIdは秘密ではない
  * （Googleも公開前提のものと明言している。アクセス制御はFirestoreのルール側で行う）。
