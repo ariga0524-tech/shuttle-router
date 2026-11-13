@@ -291,7 +291,7 @@ dialog h3{margin:0 0 12px;font-size:15px}
   <form class="lockcard" id="lockForm">
     <h2>送迎順路メーカー</h2>
     <p>この端末の名簿はパスワードで保護されています。</p>
-    <label class="fld"><span>パスワード（またはマスターコード）</span>
+    <label class="fld"><span>パスワード</span>
       <input type="password" id="lockPw" autocomplete="current-password" autofocus></label>
     <p class="lockerr hidden" id="lockErr"></p>
     <button class="btn primary wide" type="submit" id="lockGo">開く</button>
@@ -2232,7 +2232,7 @@ async function wrapPayload(data){
 async function unwrapPayload(raw){
   if(raw[0] !== "e") return decodePayload(raw);
   const env = JSON.parse(new TextDecoder().decode(unb64url(raw.slice(1))));
-  const secret = prompt("このリンクは保護されています。パスワード（またはマスターコード）を入力してください。");
+  const secret = prompt("このリンクは保護されています。パスワードを入力してください。");
   if(secret === null) return null;
   const opened = await vaultOpen(env, secret.trim());
   if(!opened) throw new Error("wrong secret");
@@ -2612,7 +2612,7 @@ $("#lockForm").addEventListener("submit", async e => {
   const ok = await unlockWith($("#lockPw").value.trim()).catch(() => false);
   btn.disabled = false; btn.textContent = "開く";
   if(!ok){
-    err.textContent = "パスワードまたはマスターコードが違います。";
+    err.textContent = "パスワードが違います。";
     err.classList.remove("hidden");
     $("#lockPw").select();
     return;
@@ -2630,8 +2630,7 @@ $("#lockForm").addEventListener("submit", async e => {
 });
 
 $("#lockForgot").addEventListener("click", () => {
-  alert("マスターコードをお持ちなら、そのままパスワード欄に入力すると開けます。\n\n"
-    + "どちらも分からない場合、この端末の名簿を取り出す方法はありません。");
+  alert("担当者にパスワードを確認するか、管理者にご相談ください。");
 });
 
 /* ==========================================================================
