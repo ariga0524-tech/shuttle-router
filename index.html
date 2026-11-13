@@ -288,28 +288,18 @@ dialog h3{margin:0 0 12px;font-size:15px}
 </div><!-- /wrap -->
 
 <div class="lockscreen hidden" id="storePick">
-  <div class="lockcard">
+  <form class="lockcard" id="storeForm">
     <h2>送迎順路メーカー</h2>
-    <p>お店の名前を入力してください。</p>
+    <p>お店の名前とパスワードを入力してください。</p>
     <label class="fld"><span>お店の名前</span>
       <input type="text" id="storeNameInput" list="knownStores" autofocus></label>
     <datalist id="knownStores"></datalist>
+    <label class="fld"><span>パスワード</span>
+      <input type="password" id="storePwInput" autocomplete="current-password"></label>
     <p class="lockerr hidden" id="storeErr"></p>
-
-    <form id="storeNewForm">
-      <label class="fld"><span>新しいパスワード（8文字以上）</span>
-        <input type="password" id="storeNewPw1" autocomplete="new-password"></label>
-      <label class="fld"><span>確認のためもう一度</span>
-        <input type="password" id="storeNewPw2" autocomplete="new-password"></label>
-      <button class="btn primary wide" type="submit" id="storeNewGo">新しいお店として登録する</button>
-    </form>
-    <p class="hint" style="text-align:center;margin:14px 0">すでに使っているお店はこちら</p>
-    <form id="storeOpenForm">
-      <label class="fld"><span>パスワード</span>
-        <input type="password" id="storeOpenPw" autocomplete="current-password"></label>
-      <button class="btn wide" type="submit" id="storeOpenGo">このお店を開く</button>
-    </form>
-  </div>
+    <button class="btn primary wide" type="submit" id="storeLoginGo">ログイン</button>
+    <button class="btn wide" type="button" id="storeRegisterGo" style="margin-top:8px">新規登録</button>
+  </form>
 </div>
 
 <div class="lockscreen hidden" id="lock">
@@ -2713,62 +2703,61 @@ async function storeExists(slug){
 if($("#storePick")){
   $("#knownStores").innerHTML = loadKnownStores().map(n => `<option value="${esc(n)}">`).join("");
 
-  $("#storeOpenForm").addEventListener("submit", async e => {
+  const readStoreInput = () => ({
+    name: $("#storeNameInput").value.trim(),
+    pw: $("#storePwInput").value,
+  });
+  const showStoreErr = msg => { const err = $("#storeErr"); err.textContent = msg; err.classList.remove("hidden"); };
+
+  async function goToStore(slug, pw, mode){
+    rememberStore($("#storeNameInput").value.trim());
+    sessionStorage.setItem(PENDING_PW_KEY, JSON.stringify({mode, pw}));
+    localStorage.setItem(STORE_KEY, slug);
+    location.reload();
+  }
+
+  $("#storeForm").addEventListener("submit", async e => {
     e.preventDefault();
-    const name = $("#storeNameInput").value.trim();
-    const pw = $("#storeOpenPw").value;
-    const err = $("#storeErr"), btn = $("#storeOpenGo");
-    err.classList.add("hidden");
-    if(!name){ err.textContent = "お店の名前を入力してください。"; err.classList.remove("hidden"); return; }
-    if(!pw){ err.textContent = "パスワードを入力してください。"; err.classList.remove("hidden"); return; }
-    if(!shareCfg){ err.textContent = "通信の設定がありません。時間をおいてお試しください。"; err.classList.remove("hidden"); return; }
+    const {name, pw} = readStoreInput();
+    $("#storeErr").classList.add("hidden");
+    if(!name) return showStoreErr("お店の名前を入力してください。");
+    if(!pw) return showStoreErr("パスワードを入力してください。");
+    if(!shareCfg) return showStoreErr("通信の設定がありません。時間をおいてお試しください。");
+    const btn = $("#storeLoginGo"), label = btn.textContent;
     btn.disabled = true; btn.textContent = "確認中…";
     try{
       const slug = slugifyStore(name);
       if(!(await storeExists(slug))){
-        err.textContent = "そのお店はまだ登録されていません。初めてなら下から登録してください。";
-        err.classList.remove("hidden");
+        showStoreErr("そのお店はまだ登録されていません。初めてなら「新規登録」からお試しください。");
         return;
       }
-      rememberStore(name);
-      sessionStorage.setItem(PENDING_PW_KEY, JSON.stringify({mode:"open", pw}));
-      localStorage.setItem(STORE_KEY, slug);
-      location.reload();
+      await goToStore(slug, pw, "open");
     }catch(ex){
-      err.textContent = ex.message || "開けませんでした。もう一度お試しください。";
-      err.classList.remove("hidden");
+      showStoreErr(ex.message || "開けませんでした。もう一度お試しください。");
     }finally{
-      btn.disabled = false; btn.textContent = "このお店を開く";
+      btn.disabled = false; btn.textContent = label;
     }
   });
 
-  $("#storeNewForm").addEventListener("submit", async e => {
-    e.preventDefault();
-    const name = $("#storeNameInput").value.trim();
-    const a = $("#storeNewPw1").value, b = $("#storeNewPw2").value;
-    const err = $("#storeErr"), btn = $("#storeNewGo");
-    err.classList.add("hidden");
-    if(!name){ err.textContent = "お店の名前を入力してください。"; err.classList.remove("hidden"); return; }
-    if(a.length < 8){ err.textContent = "新しいパスワードは8文字以上にしてください。"; err.classList.remove("hidden"); return; }
-    if(a !== b){ err.textContent = "新しいパスワードが一致しません。"; err.classList.remove("hidden"); return; }
-    if(!shareCfg){ err.textContent = "通信の設定がありません。時間をおいてお試しください。"; err.classList.remove("hidden"); return; }
+  $("#storeRegisterGo").addEventListener("click", async () => {
+    const {name, pw} = readStoreInput();
+    $("#storeErr").classList.add("hidden");
+    if(!name) return showStoreErr("お店の名前を入力してください。");
+    if(pw.length < 8) return showStoreErr("パスワードは8文字以上にしてください。");
+    if(!shareCfg) return showStoreErr("通信の設定がありません。時間をおいてお試しください。");
+    const btn = $("#storeRegisterGo"), label = btn.textContent;
     btn.disabled = true; btn.textContent = "確認中…";
     try{
       const slug = slugifyStore(name);
       if(await storeExists(slug)){
-        err.textContent = "その名前はすでに登録されています。上の「このお店を開く」からパスワードを入れて開いてください。";
-        err.classList.remove("hidden");
+        showStoreErr("その名前はすでに登録されています。「ログイン」からパスワードを入れて開いてください。");
         return;
       }
-      rememberStore(name);
-      sessionStorage.setItem(PENDING_PW_KEY, JSON.stringify({mode:"new", pw:a}));
-      localStorage.setItem(STORE_KEY, slug);
-      location.reload();
+      await goToStore(slug, pw, "new");
     }catch(ex){
-      err.textContent = ex.message || "登録できませんでした。もう一度お試しください。";
-      err.classList.remove("hidden");
+      showStoreErr(ex.message || "登録できませんでした。もう一度お試しください。");
     }finally{
-      btn.disabled = false; btn.textContent = "新しいお店として登録する";
+      btn.disabled = false; btn.textContent = label;
     }
   });
 }
