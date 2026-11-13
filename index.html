@@ -162,7 +162,7 @@ dialog h3{margin:0 0 12px;font-size:15px}
 .adminbar b{font-size:15px}
 #appTitle{cursor:default;-webkit-tap-highlight-color:transparent;user-select:none}
 .lockscreen{position:fixed;inset:0;z-index:100;background:var(--bg);
-  display:flex;align-items:center;justify-content:center;padding:20px}
+  display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto}
 .lockcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;
   padding:22px;width:min(360px,100%);box-shadow:var(--shadow)}
 .lockcard h2{margin:0 0 6px;font-size:17px}
@@ -287,6 +287,31 @@ dialog h3{margin:0 0 12px;font-size:15px}
 <!-- ============ SETTINGS ============ -->
 </div><!-- /wrap -->
 
+<div class="lockscreen hidden" id="storePick">
+  <div class="lockcard">
+    <h2>送迎順路メーカー</h2>
+    <p>お店の名前を入力してください。</p>
+    <label class="fld"><span>お店の名前</span>
+      <input type="text" id="storeNameInput" list="knownStores" autofocus></label>
+    <datalist id="knownStores"></datalist>
+    <p class="lockerr hidden" id="storeErr"></p>
+
+    <form id="storeOpenForm">
+      <label class="fld"><span>パスワード</span>
+        <input type="password" id="storeOpenPw" autocomplete="current-password"></label>
+      <button class="btn primary wide" type="submit" id="storeOpenGo">このお店を開く</button>
+    </form>
+    <p class="hint" style="text-align:center;margin:14px 0">はじめて使うお店はこちら</p>
+    <form id="storeNewForm">
+      <label class="fld"><span>新しいパスワード（8文字以上）</span>
+        <input type="password" id="storeNewPw1" autocomplete="new-password"></label>
+      <label class="fld"><span>確認のためもう一度</span>
+        <input type="password" id="storeNewPw2" autocomplete="new-password"></label>
+      <button class="btn wide" type="submit" id="storeNewGo">新しいお店として登録する</button>
+    </form>
+  </div>
+</div>
+
 <div class="lockscreen hidden" id="lock">
   <form class="lockcard" id="lockForm">
     <h2>送迎順路メーカー</h2>
@@ -296,6 +321,7 @@ dialog h3{margin:0 0 12px;font-size:15px}
     <p class="lockerr hidden" id="lockErr"></p>
     <button class="btn primary wide" type="submit" id="lockGo">開く</button>
     <button class="btn wide" type="button" id="lockForgot" style="margin-top:8px">パスワードを忘れた</button>
+    <button class="btn wide" type="button" id="lockSwitchStore" style="margin-top:8px">別のお店を開く</button>
   </form>
 </div>
 
@@ -467,7 +493,28 @@ service cloud.firestore {
    - 所要時間は「内蔵推定」または「Google実測値のキャッシュ」
    ========================================================================== */
 
-const KEY = "shuttle-router.v1";
+/* ---- 店舗（マルチテナント） ---------------------------------------------
+   店舗名が「部屋」を選ぶID。店舗ごとに名簿・場所・ドライバー・設定が
+   完全に独立する（お互いのデータは一切見えない）。
+   この仕組みができる前から使っている端末には、何も聞かずに今まで
+   通りの保存場所（store="default"）を割り当て、一切ズレが起きないようにする。
+   ========================================================================== */
+const STORE_KEY = "shuttle-router.store";
+const LEGACY_KEY = "shuttle-router.v1";
+function readStoreSlug(){
+  try{
+    const explicit = localStorage.getItem(STORE_KEY);
+    if(explicit) return explicit;
+    if(localStorage.getItem(LEGACY_KEY) !== null){
+      localStorage.setItem(STORE_KEY, "default");
+      return "default";
+    }
+  }catch(e){ /* 読めなければ未選択のまま */ }
+  return null;
+}
+const storeSlug = readStoreSlug();
+const KEY = storeSlug === "default" ? LEGACY_KEY
+  : storeSlug ? `shuttle-router.v1.${storeSlug}` : "shuttle-router.v1.__pending__";
 
 /* ---- 初期データ ------------------------------------------------------- */
 const SEED_LOCS = [
@@ -519,7 +566,8 @@ function freshDB(){
 let db = load();
 
 /* ---- 今日の入力（タブを閉じても同じ日のうちは残す） ---------------------- */
-const SESSION_KEY = "shuttle-router.session.v1";
+const SESSION_KEY = storeSlug === "default" ? "shuttle-router.session.v1"
+  : storeSlug ? `shuttle-router.session.v1.${storeSlug}` : "shuttle-router.session.v1.__pending__";
 const DAY_START_HOUR = 5;   // 日付の切り替わりは深夜0時ではなく朝5時。4:59までは前日扱い
 /** 「業務日」を YYYY-MM-DD で返す。端末のローカル時刻を使う（UTCに変換しない）*/
 function businessDateStr(d = new Date()){
@@ -2632,6 +2680,109 @@ $("#lockForm").addEventListener("submit", async e => {
 $("#lockForgot").addEventListener("click", () => {
   alert("担当者にパスワードを確認するか、管理者にご相談ください。");
 });
+$("#lockSwitchStore").addEventListener("click", () => {
+  if(!confirm("別のお店を開きますか？（今のお店のデータはこの端末に残ります）")) return;
+  try{ localStorage.removeItem(STORE_KEY); }catch(e){}
+  location.reload();
+});
+
+/* ==========================================================================
+   店舗の選択（新規登録 / 既存のお店を開く）
+   ========================================================================== */
+const KNOWN_STORES_KEY = "shuttle-router.known-stores";
+const PENDING_PW_KEY = "shuttle-router.pending-pw";
+
+function slugifyStore(name){ return name.trim().replace(/[\/\s]+/g, "_").slice(0, 80); }
+function loadKnownStores(){
+  try{ return JSON.parse(localStorage.getItem(KNOWN_STORES_KEY) || "[]"); }catch(e){ return []; }
+}
+function rememberStore(name){
+  try{
+    const list = loadKnownStores().filter(n => n !== name);
+    list.unshift(name);
+    localStorage.setItem(KNOWN_STORES_KEY, JSON.stringify(list.slice(0, 20)));
+  }catch(e){ /* 控えられなくても進行には支障ない */ }
+}
+function consumePendingStorePw(){
+  try{
+    const raw = sessionStorage.getItem(PENDING_PW_KEY);
+    if(!raw) return null;
+    sessionStorage.removeItem(PENDING_PW_KEY);
+    return JSON.parse(raw);
+  }catch(e){ return null; }
+}
+async function storeExists(slug){
+  const token = await shareAuth();
+  const url = `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(shareCfg.projectId)}`
+    + `/databases/(default)/documents/shuttle/${encodeURIComponent(slug)}`;
+  const res = await fetch(url, {headers:{Authorization:"Bearer " + token}});
+  if(res.status === 404) return false;
+  if(!res.ok) throw new Error("確認できませんでした（通信エラー）。もう一度お試しください。");
+  return true;
+}
+
+if($("#storePick")){
+  $("#knownStores").innerHTML = loadKnownStores().map(n => `<option value="${esc(n)}">`).join("");
+
+  $("#storeOpenForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const name = $("#storeNameInput").value.trim();
+    const pw = $("#storeOpenPw").value;
+    const err = $("#storeErr"), btn = $("#storeOpenGo");
+    err.classList.add("hidden");
+    if(!name){ err.textContent = "お店の名前を入力してください。"; err.classList.remove("hidden"); return; }
+    if(!pw){ err.textContent = "パスワードを入力してください。"; err.classList.remove("hidden"); return; }
+    if(!shareCfg){ err.textContent = "通信の設定がありません。時間をおいてお試しください。"; err.classList.remove("hidden"); return; }
+    btn.disabled = true; btn.textContent = "確認中…";
+    try{
+      const slug = slugifyStore(name);
+      if(!(await storeExists(slug))){
+        err.textContent = "そのお店はまだ登録されていません。初めてなら下から登録してください。";
+        err.classList.remove("hidden");
+        return;
+      }
+      rememberStore(name);
+      sessionStorage.setItem(PENDING_PW_KEY, JSON.stringify({mode:"open", pw}));
+      localStorage.setItem(STORE_KEY, slug);
+      location.reload();
+    }catch(ex){
+      err.textContent = ex.message || "開けませんでした。もう一度お試しください。";
+      err.classList.remove("hidden");
+    }finally{
+      btn.disabled = false; btn.textContent = "このお店を開く";
+    }
+  });
+
+  $("#storeNewForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const name = $("#storeNameInput").value.trim();
+    const a = $("#storeNewPw1").value, b = $("#storeNewPw2").value;
+    const err = $("#storeErr"), btn = $("#storeNewGo");
+    err.classList.add("hidden");
+    if(!name){ err.textContent = "お店の名前を入力してください。"; err.classList.remove("hidden"); return; }
+    if(a.length < 8){ err.textContent = "新しいパスワードは8文字以上にしてください。"; err.classList.remove("hidden"); return; }
+    if(a !== b){ err.textContent = "新しいパスワードが一致しません。"; err.classList.remove("hidden"); return; }
+    if(!shareCfg){ err.textContent = "通信の設定がありません。時間をおいてお試しください。"; err.classList.remove("hidden"); return; }
+    btn.disabled = true; btn.textContent = "確認中…";
+    try{
+      const slug = slugifyStore(name);
+      if(await storeExists(slug)){
+        err.textContent = "その名前はすでに登録されています。上の「このお店を開く」からパスワードを入れて開いてください。";
+        err.classList.remove("hidden");
+        return;
+      }
+      rememberStore(name);
+      sessionStorage.setItem(PENDING_PW_KEY, JSON.stringify({mode:"new", pw:a}));
+      localStorage.setItem(STORE_KEY, slug);
+      location.reload();
+    }catch(ex){
+      err.textContent = ex.message || "登録できませんでした。もう一度お試しください。";
+      err.classList.remove("hidden");
+    }finally{
+      btn.disabled = false; btn.textContent = "新しいお店として登録する";
+    }
+  });
+}
 
 /* ==========================================================================
    みんなで共有する（Firebase Firestore）
@@ -2641,7 +2792,8 @@ $("#lockForgot").addEventListener("click", () => {
    Firebase の設定値は公開前提のもので、秘密ではない。
    ========================================================================== */
 const SHARE_KEY = "shuttle-router.share";
-const SHARE_DOC = "shuttle/roster";
+const SHARE_DOC = storeSlug === "default" ? "shuttle/roster"
+  : storeSlug ? `shuttle/${storeSlug}` : "shuttle/__pending__";
 /**
  * あらかじめ用意しておいた共有先（Firebase）。apiKeyとprojectIdは秘密ではない
  * （Googleも公開前提のものと明言している。アクセス制御はFirestoreのルール側で行う）。
@@ -2991,6 +3143,27 @@ function withTimeout(promise, ms){
 }
 
 (async function start(){
+  // お店がまだ選ばれていない（この仕組みができてから初めて開いた端末）：
+  // お店の選択画面だけを見せて、ほかは何もしない
+  if(!storeSlug){
+    $("#storePick").classList.remove("hidden");
+    return;
+  }
+
+  // 「新しいお店として登録する」の直後のリロード：その場でパスワードを設定する
+  const pending = consumePendingStorePw();
+  if(pending && pending.mode === "new"){
+    try{
+      const {env} = await protectWith(pending.pw, FIXED_MASTER_CODE);
+      lastEnvelope = env;
+      saveLocal();
+      scheduleSync();
+    }catch(e){ console.warn("新しいお店の登録に失敗しました", e); }
+    renderAll(); renderPwState(); renderShareState(); renderResult();
+    consumeTransferLink();
+    return;
+  }
+
   // 共有中でこの端末にまだ名簿が無いときは、預けてある金庫を取ってきて解錠する。
   // 共有先はアプリに組み込み済みのため毎回ここを通るので、電波が悪い環境でも
   // 固まったままにならないよう、一定時間で諦めて通常起動に進む。
@@ -3003,6 +3176,22 @@ function withTimeout(promise, ms){
     }catch(e){ console.warn("共有先から取得できませんでした", e); }
   }
   if(storedEnvelope()){
+    // 「既存のお店を開く」の直後のリロード：さっき入れたパスワードでそのまま開ける
+    if(pending && pending.mode === "open"){
+      const ok = await unlockWith(pending.pw).catch(() => false);
+      if(ok){
+        renderAll(); renderPwState(); renderShareState(); renderResult();
+        consumeTransferLink();
+        if(shareCfg){
+          setShareStatus("同期中…");
+          pullShared()
+            .then(r => setShareStatus(r === true ? "共有先の内容を取り込みました" : "共有中です", "ok"))
+            .catch(e => setShareStatus(e.message, "err"));
+        }
+        return;
+      }
+      // 自動では開けなかった場合は、下の通常のロック画面で入力し直してもらう
+    }
     renderShareState();
     showLock();
     return;
