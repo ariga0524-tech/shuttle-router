@@ -2643,6 +2643,16 @@ $("#lockForgot").addEventListener("click", () => {
    ========================================================================== */
 const SHARE_KEY = "shuttle-router.share";
 const SHARE_DOC = "shuttle/roster";
+/**
+ * あらかじめ用意しておいた共有先（Firebase）。apiKeyとprojectIdは秘密ではない
+ * （Googleも公開前提のものと明言している。アクセス制御はFirestoreのルール側で行う）。
+ * これをコードに書いておくことで、担当者の端末は管理画面を一切開かずに済み、
+ * パスワードを入力するだけで名簿が入るようになる。
+ */
+const DEFAULT_SHARE_CFG = {
+  apiKey: "AIzaSyCrQvhQYr-hThBxBd3VUEtj4c9bzDR-Wh8",
+  projectId: "shuttle-router",
+};
 
 let shareCfg = null;        // {apiKey, projectId}
 let shareToken = null;      // 匿名ログインのトークン
@@ -2655,13 +2665,17 @@ function loadShareCfg(){
   try{
     const raw = localStorage.getItem(SHARE_KEY);
     const d = raw ? JSON.parse(raw) : null;
-    return (d && d.apiKey && d.projectId) ? d : null;
-  }catch(e){ return null; }
+    if(d && d.disabled) return null;   // この端末だけ明示的に共有をやめた
+    if(d && d.apiKey && d.projectId) return d;
+  }catch(e){ /* この端末の保存分は使えないので、下の既定値にフォールバック */ }
+  return DEFAULT_SHARE_CFG.apiKey && DEFAULT_SHARE_CFG.projectId ? DEFAULT_SHARE_CFG : null;
 }
 function saveShareCfg(cfg){
   try{
-    if(cfg) localStorage.setItem(SHARE_KEY, JSON.stringify(cfg));
-    else localStorage.removeItem(SHARE_KEY);
+    // cfg が無い（＝共有をやめる）場合、ただ消すだけだと次回読み込み時に
+    // 既定値（DEFAULT_SHARE_CFG）へ自動的に戻ってしまうため、明示的な
+    // 「やめた」印を残す
+    localStorage.setItem(SHARE_KEY, JSON.stringify(cfg || {disabled:true}));
   }catch(e){ /* 保存できなくても動作は続ける */ }
 }
 /** 貼り付けられた文字列から apiKey と projectId を拾う */
@@ -2964,11 +2978,21 @@ $("#adminClose").addEventListener("click", closeAdmin);
 /* 起動 */
 shareCfg = loadShareCfg();
 
+/** 指定時間で諦める（通信が詰まって固まったまま、にしないため） */
+function withTimeout(promise, ms){
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error("タイムアウト")), ms)),
+  ]);
+}
+
 (async function start(){
-  // 共有中でこの端末にまだ名簿が無いときは、預けてある金庫を取ってきて解錠する
+  // 共有中でこの端末にまだ名簿が無いときは、預けてある金庫を取ってきて解錠する。
+  // 共有先はアプリに組み込み済みのため毎回ここを通るので、電波が悪い環境でも
+  // 固まったままにならないよう、一定時間で諦めて通常起動に進む。
   if(shareCfg && !storedEnvelope()){
     try{
-      const r = await pullShared();
+      const r = await withTimeout(pullShared(), 8000);
       if(r === "locked"){
         try{ localStorage.setItem(KEY, JSON.stringify(lastEnvelope)); }catch(e){}
       }
