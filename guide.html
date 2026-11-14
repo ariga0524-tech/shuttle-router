@@ -38,38 +38,41 @@ h1{
 .lede{color:var(--sub); font-size:14px; margin:0 0 26px}
 .lede b{color:var(--ink)}
 
-.steps{display:flex; flex-direction:column; gap:10px; margin-bottom:28px}
+h2.section{
+  font-family:"Space Grotesk",sans-serif; font-weight:700; font-size:16px;
+  display:flex; align-items:center; gap:10px; margin:30px 0 10px;
+}
+h2.section:first-of-type{margin-top:6px}
+h2.section .num{
+  width:26px; height:26px; border-radius:50%; background:var(--accent); color:var(--accent-ink);
+  font-size:13px; display:flex; align-items:center; justify-content:center; flex:none;
+  font-variant-numeric: tabular-nums;
+}
+
+.steps{display:flex; flex-direction:column; gap:10px; margin-bottom:8px}
 .step{
   background:var(--panel); border:1px solid var(--line); border-radius:14px;
   padding:14px 16px; display:grid; grid-template-columns:auto 1fr; gap:4px 14px; align-items:start;
   min-width:0;
 }
-.step .num{
-  font-family:"Space Grotesk",sans-serif; font-weight:700; font-size:20px; color:var(--accent);
-  grid-row:1/3; width:30px; text-align:center; align-self:center;
-  font-variant-numeric: tabular-nums;
+.step .letter{
+  font-family:"Space Grotesk",sans-serif; font-weight:700; font-size:14px; color:var(--accent);
+  grid-row:1/3; width:22px; text-align:center; align-self:center;
 }
-.step h2{font-size:15px; margin:0; font-weight:600; min-width:0}
-.step p{margin:2px 0 0; font-size:13.5px; color:var(--sub); line-height:1.55; min-width:0}
+.step h3{font-size:14.5px; margin:0; font-weight:600; min-width:0}
+.step p{margin:2px 0 0; font-size:13.5px; color:var(--sub); line-height:1.6; min-width:0}
 .step p b{color:var(--ink); font-weight:600}
-
-.cols{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px; margin-bottom:18px}
-.card{
-  background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px 18px; min-width:0;
+.step ul{margin:6px 0 0; padding-left:1.1em}
+.step li{font-size:13.5px; color:var(--sub); line-height:1.6; margin-bottom:3px}
+.step li b{color:var(--ink); font-weight:600}
+code{
+  background:var(--chip); border-radius:5px; padding:1px 6px; font-size:12.5px;
+  font-family:inherit; color:var(--ink);
 }
-.card h3{
-  font-family:"Space Grotesk",sans-serif; font-size:14px; margin:0 0 10px; font-weight:700;
-  display:flex; align-items:center; gap:8px;
-}
-.dot{width:8px; height:8px; border-radius:50%; background:var(--accent2); flex:none}
-.card ul{margin:0; padding-left:0; list-style:none; display:flex; flex-direction:column; gap:8px}
-.card li{font-size:13px; color:var(--sub); line-height:1.5; padding-left:16px; position:relative}
-.card li::before{content:"–"; position:absolute; left:0; color:var(--accent2)}
-.card li b{color:var(--ink); font-weight:600}
 
 .tip{
   background:var(--chip); border-radius:14px; padding:14px 18px; font-size:13px; color:var(--sub);
-  line-height:1.6; display:flex; gap:10px; align-items:flex-start;
+  line-height:1.6; display:flex; gap:10px; align-items:flex-start; margin:16px 0;
 }
 .tip .ic{font-family:"Space Grotesk",sans-serif; font-weight:700; color:var(--accent2); flex:none}
 .tip b{color:var(--ink)}
@@ -83,74 +86,176 @@ h1{
   <h1>送迎順路メーカー 使い方</h1>
   <p class="lede">インストール不要。URLを開くだけで、<b>その日の出勤者から車ごとの送迎順路</b>を自動で組めます。</p>
 
+  <h2 class="section"><span class="num">1</span>初めての店舗の登録方法</h2>
   <div class="steps">
     <div class="step">
-      <div class="num">1</div>
-      <h2>今日の条件を確認</h2>
-      <p>「今日の条件」で<b>出発地点</b>を選びます。ドライバーを登録していれば、<b>今日乗るドライバーにチェック</b>するだけで車の台数も決まります。</p>
+      <div class="letter">a</div>
+      <h3>URLを開くと、最初に店舗選択の画面が出ます</h3>
+      <p>まだどのお店にも登録していない端末では、必ずこの画面が最初に出ます。</p>
     </div>
     <div class="step">
-      <div class="num">2</div>
-      <h2>出勤者を選ぶ</h2>
-      <p>「今日の出勤者を選ぶ」で、出勤する人に<b>チェック</b>を入れます。</p>
+      <div class="letter">b</div>
+      <h3>「新規登録はコチラ」を押す</h3>
+      <p>下に<b>お店の名前・パスワード・確認のためもう一度パスワード</b>の欄が開きます。</p>
     </div>
     <div class="step">
-      <div class="num">3</div>
-      <h2>送迎場所を決める</h2>
-      <p>各人の登録済み候補から選びます。候補にない場所は「その他」から<b>住所や駅名で検索</b>して指定できます。</p>
+      <div class="letter">c</div>
+      <h3>お店の名前とパスワードを決めて入力</h3>
+      <p>お店の名前は、担当者全員が合わせて入力する<b>合いことば</b>のようなものです（表記ゆれがあると別のお店として扱われるので、他の担当者にそのまま伝えてください）。
+        パスワードは<b>8文字以上</b>で、確認用にもう一度同じものを入力します。一致しない場合はエラーが出ます。</p>
     </div>
     <div class="step">
-      <div class="num">4</div>
-      <h2>「順路を作成」を押す</h2>
+      <div class="letter">d</div>
+      <h3>「新規登録」を押す</h3>
+      <p>同じ名前のお店がすでに登録されていた場合は、エラーになり登録できません（乗っ取り防止のためです）。
+        その場合は下の「2. ログイン方法」からパスワードを入れて開いてください。</p>
+    </div>
+  </div>
+
+  <h2 class="section"><span class="num">2</span>ログイン方法</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="letter">a</div>
+      <h3>別の端末・2回目以降は「ログイン」</h3>
+      <p>店舗選択の画面で、すでに登録済みの<b>お店の名前とパスワード</b>を入れて「ログイン」を押すだけです。
+        正しければ、他の担当者と同じ名簿がそのまま表示されます。</p>
+    </div>
+    <div class="step">
+      <div class="letter">b</div>
+      <h3>お店の名前は覚えたまま、パスワードは毎回聞かれる</h3>
+      <p>同じ端末・同じブラウザなら、お店の名前を再入力する必要はありません。
+        ただしパスワードは、タブを閉じて次に開いたときなど、アプリを開くたびに入力が必要です。</p>
+    </div>
+    <div class="step">
+      <div class="letter">c</div>
+      <h3>別のお店に切り替えたいとき</h3>
+      <p>パスワード入力画面の「別のお店を開く」から、店舗選択の画面に戻れます。</p>
+    </div>
+  </div>
+  <div class="tip">
+    <span class="ic">!</span>
+    <span><b>お店の名前・パスワードは、入力ミスや表記ゆれに注意。</b>全角スペースの有無など、少しでも違うと別のお店として扱われてしまいます。</span>
+  </div>
+
+  <h2 class="section"><span class="num">3</span>スタッフの名前入力方法</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="letter">a</div>
+      <h3>「スタッフ・場所」タブを開く</h3>
+      <p>画面上部のタブから切り替えます。</p>
+    </div>
+    <div class="step">
+      <div class="letter">b</div>
+      <h3>「＋ スタッフを追加」を押す</h3>
+      <p><b>名前</b>と、あれば<b>社員番号（任意）</b>を入力します。住所の登録も同じ画面で続けて行います（次の「4. 住所登録方法」）。</p>
+    </div>
+    <div class="step">
+      <div class="letter">c</div>
+      <h3>名前を直す・消す</h3>
+      <p>「スタッフ・場所」タブの一覧から、各行の「編集」「削除」で変更できます。</p>
+    </div>
+  </div>
+
+  <h2 class="section"><span class="num">4</span>住所登録方法</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="letter">a</div>
+      <h3>スタッフを追加・編集する画面で、そのまま住所を検索</h3>
+      <p>「送迎先の住所（第1候補）」の欄に<b>住所・駅名・施設名</b>を入力して「検索」を押すだけです。
+        緯度経度などを自分で調べる必要はありません。見つかった場所が下に表示されます。</p>
+    </div>
+    <div class="step">
+      <div class="letter">b</div>
+      <h3>第2候補（任意）も登録できる</h3>
+      <p>「たまに別の場所に送る」人がいれば、第2候補にもう一つ住所を登録しておけます。
+        送迎を組むときにどちらを使うか選べます。</p>
+    </div>
+    <div class="step">
+      <div class="letter">c</div>
+      <h3>駅など、複数人が使う場所は「登録済みの場所から選ぶ」</h3>
+      <p>住所欄の下の「登録済みの場所から選ぶ（駅など）」を開くと、すでに登録済みの場所を選べます。
+        よく使う駅などは、先に「スタッフ・場所」タブの「送迎場所」から「＋ 場所を追加」で登録しておくと便利です。</p>
+    </div>
+    <div class="step">
+      <div class="letter">d</div>
+      <h3>当日だけ違う場所に送る場合</h3>
+      <p>スタッフの登録を変えなくても、送迎を組む画面の「送迎場所を決める」で「その他」を選べば、
+        その日だけ別の住所を指定できます。</p>
+    </div>
+  </div>
+  <div class="tip">
+    <span class="ic">?</span>
+    <span><b>住所が見つからない時は</b>、番地の書き方を変えるか、近くの<b>駅名・施設名</b>で検索してみてください。</span>
+  </div>
+
+  <h2 class="section"><span class="num">5</span>ドライバー登録方法</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="letter">a</div>
+      <h3>「スタッフ・場所」タブの「ドライバー」から「＋ ドライバーを追加」</h3>
+      <p><b>名前</b>だけで登録できます。</p>
+    </div>
+    <div class="step">
+      <div class="letter">b</div>
+      <h3>登録すると、毎日の運転手選びが楽になる</h3>
+      <p>登録しておくと、「今日の条件」で<b>今日乗るドライバーにチェック</b>するだけで、車の台数とドライバー名が自動で決まります。
+        登録しなければ、これまでどおり1台・2台・3台を直接選ぶ形のままです。</p>
+    </div>
+  </div>
+
+  <h2 class="section"><span class="num">6</span>登録したものの使い方</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="letter">a</div>
+      <h3>今日の条件を確認</h3>
+      <p>「送迎を組む」タブの「今日の条件」で<b>出発地点</b>を選びます。
+        ドライバーを登録していれば、今日乗るドライバーにチェックするだけで車の台数も決まります。</p>
+    </div>
+    <div class="step">
+      <div class="letter">b</div>
+      <h3>今日の出勤者を選ぶ</h3>
+      <p>登録済みのスタッフ一覧から、出勤する人に<b>チェック</b>を入れます。名前で絞り込み検索もできます。</p>
+    </div>
+    <div class="step">
+      <div class="letter">c</div>
+      <h3>送迎場所を決める</h3>
+      <p>各人の登録済み候補（第1・第2候補）から選びます。候補にない場所やその日だけ違う場所は「その他」から住所・駅名で検索して指定できます。</p>
+    </div>
+    <div class="step">
+      <div class="letter">d</div>
+      <h3>「順路を作成」を押す</h3>
       <p>車ごとの<b>回る順番</b>が自動で出ます。人数が車に乗り切らない日は、積み直しの「便」にも自動で分けます。</p>
     </div>
-  </div>
-
-  <div class="tip" style="margin-bottom:28px">
-    <span class="ic">!</span>
-    <span><b>はじめて開く端末では、最初に「お店の名前」を聞かれます。</b>
-      すでに使っているお店の名前と<b>パスワード</b>を入れて「ログイン」すれば、同じ名簿がそのまま入ります。
-      まだ無いお店は「新規登録はコチラ」を押すと出てくる欄で、名前とパスワードを決めて登録してください。次回からは聞かれません。</span>
-  </div>
-
-  <div class="cols">
-    <div class="card">
-      <h3><span class="dot"></span>できた順路でやること</h3>
+    <div class="step">
+      <div class="letter">e</div>
+      <h3>できた順路でやること</h3>
       <ul>
         <li><b>↑↓で並び替え・車の変更・×で当日キャンセル</b>ができ、都度組み直せます</li>
         <li><b>「Googleマップで開く」</b>でそのままカーナビに流せます</li>
         <li><b>「コピー」</b>で、日付・ドライバー名・送迎先だけのシンプルな文章になり、LINEにそのまま貼れます</li>
       </ul>
     </div>
-    <div class="card">
-      <h3><span class="dot"></span>スタッフ・場所の登録</h3>
-      <ul>
-        <li>「スタッフ・場所」タブの「＋スタッフを追加」から、名前・社員番号・住所をまとめて登録できます</li>
-        <li>住所は<b>検索するだけ</b>。緯度経度などを調べる必要はありません。駅名や施設名でも検索できます</li>
-        <li>駅など共有の場所を使いたいときは「登録済みの場所から選ぶ」で選べます</li>
-      </ul>
-    </div>
-    <div class="card">
-      <h3><span class="dot"></span>ドライバーの登録</h3>
-      <ul>
-        <li>同じく「スタッフ・場所」タブの「ドライバー」から、名前だけで登録できます</li>
-        <li>登録しておくと、「今日の条件」でチェックするだけで車の台数とドライバー名が決まります</li>
-        <li>順路の結果画面で、どの車にどのドライバーを乗せるかはあとから選び直せます</li>
-      </ul>
-    </div>
-    <div class="card">
-      <h3><span class="dot"></span>パスワードの設定・変更</h3>
-      <ul>
-        <li>お店の担当者全員で<b>共通のパスワード</b>を使います</li>
-        <li><b>変更する時</b>：「パスワード」タブの<b>「パスワードを変更する」</b>を押し、今のパスワードと新しいパスワードを入力</li>
-        <li>変更したら、他の担当者にも新しいパスワードを伝えてください</li>
-      </ul>
-    </div>
   </div>
 
-  <div class="tip">
-    <span class="ic">?</span>
-    <span><b>住所が見つからない時は</b>、番地の書き方を変えるか、近くの<b>駅名・施設名</b>で検索してみてください。</span>
+  <h2 class="section"><span class="num">7</span>共有の仕方</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="letter">a</div>
+      <h3>特別な設定は不要。お店の名前とパスワードが同じなら、自動で共有される</h3>
+      <p>同じお店に<b>ログイン</b>すれば、別の端末・別の担当者でも同じスタッフ・場所・ドライバーの名簿を見られます。
+        誰かが追加・編集すると、他の端末にも少し時間が経つと反映されます。</p>
+    </div>
+    <div class="step">
+      <div class="letter">b</div>
+      <h3>データは暗号化して保管される</h3>
+      <p>預け先にも中身は読めない形で保管されます。担当者間で見えるのは、同じお店にログインできた人だけです。</p>
+    </div>
+    <div class="step">
+      <div class="letter">c</div>
+      <h3>パスワードを変更したいとき</h3>
+      <p>「パスワード」タブの<b>「パスワードを変更する」</b>から変更できます。これは店舗選択画面でログインに使うのと<b>同じ1つのパスワード</b>です。
+        変更したら、他の担当者にも新しいパスワードを伝えてください。伝わるまでの間、その人は開けなくなります。</p>
+    </div>
   </div>
 
   <a class="back" href="./">← 送迎順路メーカーに戻る</a>
