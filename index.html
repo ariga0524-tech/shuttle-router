@@ -312,6 +312,8 @@ dialog h3{margin:0 0 12px;font-size:15px}
       <p class="lockerr hidden" id="storeRegErr"></p>
       <button class="btn wide" type="button" id="storeRegisterGo">新規登録</button>
     </div>
+
+    <a href="./guide.html" style="display:block;text-align:center;margin-top:18px;font-size:13px;color:var(--sub);text-decoration:none">使い方</a>
   </form>
 </div>
 
@@ -2762,7 +2764,9 @@ if($("#storePick")){
     const err = $("#storeRegErr");
     err.classList.add("hidden");
     if(!name){ err.textContent = "お店の名前を入力してください。"; err.classList.remove("hidden"); return; }
-    if(pw1.length < 8){ err.textContent = "パスワードは8文字以上にしてください。"; err.classList.remove("hidden"); return; }
+    if(!(pw1.length >= 8 && /[A-Za-z]/.test(pw1) && /[0-9]/.test(pw1))){
+      err.textContent = "パスワードは英字と数字を含めて8文字以上にしてください。"; err.classList.remove("hidden"); return;
+    }
     if(pw1 !== pw2){ err.textContent = "パスワードが一致しません。"; err.classList.remove("hidden"); return; }
     if(!shareCfg){ err.textContent = "通信の設定がありません。時間をおいてお試しください。"; err.classList.remove("hidden"); return; }
     const btn = $("#storeRegisterGo"), label = btn.textContent;
