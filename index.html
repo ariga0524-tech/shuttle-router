@@ -298,7 +298,20 @@ dialog h3{margin:0 0 12px;font-size:15px}
       <input type="password" id="storePwInput" autocomplete="current-password"></label>
     <p class="lockerr hidden" id="storeErr"></p>
     <button class="btn primary wide" type="submit" id="storeLoginGo">ログイン</button>
-    <button class="btn wide" type="button" id="storeRegisterGo" style="margin-top:8px">新規登録</button>
+
+    <button type="button" id="storeRegisterToggle"
+      style="display:block;margin:16px auto 0;background:none;border:none;color:var(--accent);font-size:13px;text-decoration:underline;cursor:pointer;padding:4px">新規登録はコチラ</button>
+
+    <div class="hidden" id="storeRegisterBox" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+      <label class="fld"><span>お店の名前</span>
+        <input type="text" id="storeRegNameInput" list="knownStores"></label>
+      <label class="fld"><span>パスワード</span>
+        <input type="password" id="storeRegPw1" autocomplete="new-password"></label>
+      <label class="fld"><span>確認のためもう一度パスワード</span>
+        <input type="password" id="storeRegPw2" autocomplete="new-password"></label>
+      <p class="lockerr hidden" id="storeRegErr"></p>
+      <button class="btn wide" type="button" id="storeRegisterGo">新規登録</button>
+    </div>
   </form>
 </div>
 
@@ -2703,14 +2716,14 @@ async function storeExists(slug){
 if($("#storePick")){
   $("#knownStores").innerHTML = loadKnownStores().map(n => `<option value="${esc(n)}">`).join("");
 
-  const readStoreInput = () => ({
-    name: $("#storeNameInput").value.trim(),
-    pw: $("#storePwInput").value,
+  $("#storeRegisterToggle").addEventListener("click", () => {
+    $("#storeRegisterBox").classList.remove("hidden");
+    $("#storeRegisterToggle").classList.add("hidden");
+    $("#storeRegNameInput").focus();
   });
-  const showStoreErr = msg => { const err = $("#storeErr"); err.textContent = msg; err.classList.remove("hidden"); };
 
-  async function goToStore(slug, pw, mode){
-    rememberStore($("#storeNameInput").value.trim());
+  async function goToStore(name, slug, pw, mode){
+    rememberStore(name);
     sessionStorage.setItem(PENDING_PW_KEY, JSON.stringify({mode, pw}));
     localStorage.setItem(STORE_KEY, slug);
     location.reload();
@@ -2718,44 +2731,53 @@ if($("#storePick")){
 
   $("#storeForm").addEventListener("submit", async e => {
     e.preventDefault();
-    const {name, pw} = readStoreInput();
-    $("#storeErr").classList.add("hidden");
-    if(!name) return showStoreErr("お店の名前を入力してください。");
-    if(!pw) return showStoreErr("パスワードを入力してください。");
-    if(!shareCfg) return showStoreErr("通信の設定がありません。時間をおいてお試しください。");
+    const name = $("#storeNameInput").value.trim();
+    const pw = $("#storePwInput").value;
+    const err = $("#storeErr");
+    err.classList.add("hidden");
+    if(!name){ err.textContent = "お店の名前を入力してください。"; err.classList.remove("hidden"); return; }
+    if(!pw){ err.textContent = "パスワードを入力してください。"; err.classList.remove("hidden"); return; }
+    if(!shareCfg){ err.textContent = "通信の設定がありません。時間をおいてお試しください。"; err.classList.remove("hidden"); return; }
     const btn = $("#storeLoginGo"), label = btn.textContent;
     btn.disabled = true; btn.textContent = "確認中…";
     try{
       const slug = slugifyStore(name);
       if(!(await storeExists(slug))){
-        showStoreErr("そのお店はまだ登録されていません。初めてなら「新規登録」からお試しください。");
+        err.textContent = "そのお店はまだ登録されていません。初めてなら「新規登録はコチラ」からお試しください。";
+        err.classList.remove("hidden");
         return;
       }
-      await goToStore(slug, pw, "open");
+      await goToStore(name, slug, pw, "open");
     }catch(ex){
-      showStoreErr(ex.message || "開けませんでした。もう一度お試しください。");
+      err.textContent = ex.message || "開けませんでした。もう一度お試しください。";
+      err.classList.remove("hidden");
     }finally{
       btn.disabled = false; btn.textContent = label;
     }
   });
 
   $("#storeRegisterGo").addEventListener("click", async () => {
-    const {name, pw} = readStoreInput();
-    $("#storeErr").classList.add("hidden");
-    if(!name) return showStoreErr("お店の名前を入力してください。");
-    if(pw.length < 8) return showStoreErr("パスワードは8文字以上にしてください。");
-    if(!shareCfg) return showStoreErr("通信の設定がありません。時間をおいてお試しください。");
+    const name = $("#storeRegNameInput").value.trim();
+    const pw1 = $("#storeRegPw1").value, pw2 = $("#storeRegPw2").value;
+    const err = $("#storeRegErr");
+    err.classList.add("hidden");
+    if(!name){ err.textContent = "お店の名前を入力してください。"; err.classList.remove("hidden"); return; }
+    if(pw1.length < 8){ err.textContent = "パスワードは8文字以上にしてください。"; err.classList.remove("hidden"); return; }
+    if(pw1 !== pw2){ err.textContent = "パスワードが一致しません。"; err.classList.remove("hidden"); return; }
+    if(!shareCfg){ err.textContent = "通信の設定がありません。時間をおいてお試しください。"; err.classList.remove("hidden"); return; }
     const btn = $("#storeRegisterGo"), label = btn.textContent;
     btn.disabled = true; btn.textContent = "確認中…";
     try{
       const slug = slugifyStore(name);
       if(await storeExists(slug)){
-        showStoreErr("その名前はすでに登録されています。「ログイン」からパスワードを入れて開いてください。");
+        err.textContent = "その名前はすでに登録されています。上の「ログイン」からパスワードを入れて開いてください。";
+        err.classList.remove("hidden");
         return;
       }
-      await goToStore(slug, pw, "new");
+      await goToStore(name, slug, pw1, "new");
     }catch(ex){
-      showStoreErr(ex.message || "登録できませんでした。もう一度お試しください。");
+      err.textContent = ex.message || "登録できませんでした。もう一度お試しください。";
+      err.classList.remove("hidden");
     }finally{
       btn.disabled = false; btn.textContent = label;
     }
